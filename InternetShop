@@ -1,0 +1,147 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace FileCourse
+{  
+    public class Shop
+    {
+        private readonly Warehouse _warehouse;
+        private readonly Cart _cart;
+
+        public Shop(Warehouse warehouse)
+        {
+            _warehouse = warehouse;
+            _cart = new Cart();
+        }
+
+        public void AddToCart(string productName, int requiredQuantity) 
+        {
+            Product requestedProduct = _warehouse.Deliver(productName, requiredQuantity, out int availableQuantity);
+
+            if (requestedProduct == null)
+            {
+                Console.WriteLine($"{productName} can't be found!");
+            }
+            else if (requiredQuantity > availableQuantity) 
+            {
+                Console.WriteLine($"The stock of {productName} is insufficient. The product hasn't been added");
+            }
+            else
+            {
+                _cart.AddItem(requestedProduct, requiredQuantity);
+                Console.WriteLine($"{requiredQuantity} of {productName} added");
+            }
+        }
+       
+        public void MakeOrder() 
+        {
+            string paylink = GeneratePaylink();
+            Dictionary<Product, int> purchasedProducts = _cart.GetAddedProducts(paylink);
+
+            if (purchasedProducts != null) 
+                _warehouse.ReduceStock(purchasedProducts);
+        }
+
+        private string GeneratePaylink() 
+        {
+            Random random = new Random();
+            int orderCode = random.Next(int.MinValue, int.MaxValue);
+            string fixedPart = "CustomerOrderNo";
+            return fixedPart + orderCode;       
+        }
+
+        public void ShowAvailableProducts() => _warehouse.ShowStoredProducts();
+    }
+
+    public class Cart
+    {
+        private Dictionary<Product, int> _addedProducts = new Dictionary<Product, int>();
+
+        public void AddItem(Product product, int addedQuantity) =>
+            _addedProducts.Add(product, addedQuantity);
+
+        public void ShowAddedProducts()
+        {
+            foreach (var addedProduct in _addedProducts)
+                Console.WriteLine($"{addedProduct.Key.Name} - {addedProduct.Value} шт.");
+        }
+
+        public Dictionary<Product, int> GetAddedProducts(string paylink) 
+        {
+            return TryConfirmPayment(paylink) ? _addedProducts : null;         
+        }
+
+        private bool TryConfirmPayment(string paylink) 
+        {
+            return true; //для упрощения платеж всегда подтверждается
+        }
+    }
+
+    public class Warehouse 
+    {
+        private Dictionary<Product, int> _storedProducts = new Dictionary<Product, int>();
+
+        public Warehouse() 
+        {
+            int IPhone12InitialCount = 20;
+            int IPhone11InitialCount = 20;
+
+            _storedProducts.Add(new Product(ProductList.IPhone12), IPhone12InitialCount);
+            _storedProducts.Add(new Product(ProductList.IPhone11), IPhone11InitialCount);
+        }
+
+        public Product Deliver(string requestedProductName, int requestedQuantity, out int deliveredQuantity) 
+        {
+            Product deliveredProduct = _storedProducts.FirstOrDefault
+                (product => product.Key.Name == requestedProductName).Key;
+
+            if (deliveredProduct != null)
+            {
+                if (_storedProducts[deliveredProduct] >= requestedQuantity)
+                {
+                    deliveredQuantity = requestedQuantity;
+                    return deliveredProduct;
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException(nameof(requestedQuantity));
+                }
+            }
+            else 
+            {
+                throw new ArgumentNullException(nameof(requestedProductName));
+            }          
+        }
+
+        public void ReduceStock(Dictionary<Product, int> removedProducts) 
+        {
+            foreach (var product in removedProducts) 
+            {
+                _storedProducts[product.Key] -= product.Value;
+
+                if (_storedProducts[product.Key] == 0)
+                    _storedProducts.Remove(product.Key);
+            }           
+        }
+
+        public void ShowStoredProducts() 
+        {
+            foreach (var storedProduct in _storedProducts) 
+                Console.WriteLine($"{storedProduct.Key.Name} - {storedProduct.Value} шт.");
+        }
+    }  
+
+    public class Product 
+    {
+        public string Name { get; private set; }
+
+        public Product(string name) => Name = name;
+    }
+
+    public static class ProductList 
+    {
+        public static readonly string IPhone12 = nameof(IPhone12);
+        public static readonly string IPhone11 = nameof(IPhone11);
+    }
+}
