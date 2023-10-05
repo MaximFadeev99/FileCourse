@@ -1,0 +1,39 @@
+using System;
+
+namespace FileCourse
+{
+    class Player
+    {
+        private int _health;
+
+        public void TakeDamage(int damage) 
+        {
+            if (damage < 0)
+                throw new ArgumentOutOfRangeException(nameof(damage), "Incoming damage can't be negative");
+
+            _health -= damage;
+        }
+    }
+
+    class Bot
+    {
+        private readonly Weapon _weapon;
+
+        public void OnSeePlayer(Player player) => _weapon.Fire(player);
+    }
+
+    class Weapon
+    {
+        private readonly int _damage;
+        private int _bullets;
+
+        public void Fire(Player player)
+        {
+            if (_bullets > 0) 
+            {
+                player.TakeDamage(_damage);
+                _bullets -= 1;                      
+            }
+        }
+    }   
+}
