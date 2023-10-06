@@ -1,0 +1,10 @@
+class Weapon
+{
+    private const int BulletsReductionRate = 1;
+
+    private int _bullets;
+
+    public bool CanShoot() => _bullets > 0;
+
+    public void Shoot() => _bullets -= BulletsReductionRate;
+}
