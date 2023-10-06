@@ -1,0 +1,79 @@
+using System;
+using System.IO;
+
+namespace Lesson
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            ConsolePathfinder consolePathfinder = new ConsolePathfinder();
+            FilePathfinder filePathfinder = new FilePathfinder();
+            ProtectedConsolePathfinder protectedConsolePathfinder = new ProtectedConsolePathfinder();
+            ProtectedFilePathfinder protectedFilePathfinder = new ProtectedFilePathfinder();
+            FridayPathfinder fridayPathfinder = new FridayPathfinder();
+            string testMessage = "Testing logging system";
+
+            consolePathfinder.Find(testMessage);
+            filePathfinder.Find(testMessage);
+            protectedConsolePathfinder.Find(testMessage);
+            protectedFilePathfinder.Find(testMessage);
+            fridayPathfinder.Find(testMessage);
+        }
+    }
+
+    public class FridayPathfinder : ProtectedFilePathfinder 
+    {
+        public override void Find(string message)
+        {
+            Console.WriteLine(message);
+            base.Find(message);
+        }
+    }
+
+    public class ProtectedConsolePathfinder : ConsolePathfinder
+    {
+        public override void Find(string message)
+        {
+            if (DateTime.Now.DayOfWeek == DayOfWeek.Friday)
+                base.Find(message);
+        }
+    }
+
+    public class ProtectedFilePathfinder : FilePathfinder
+    {
+        public override void Find(string message)
+        {
+            if (DateTime.Now.DayOfWeek == DayOfWeek.Friday)
+                base.Find(message);
+        }
+    }
+
+    public class ConsolePathfinder : Pathfinder
+    {
+        public override void Find(string message)
+        {
+            Console.WriteLine(message);
+        }
+    }
+
+    public class FilePathfinder : Pathfinder
+    {
+        string fileName = "log.txt";
+        
+        public override void Find(string message)
+        {
+            File.WriteAllText(fileName, message);
+        }
+    }
+
+    public abstract class Pathfinder : ILogger
+    {
+        public abstract void Find(string message);
+    }
+
+    public interface ILogger 
+    {
+       void Find(string message);
+    }
+}
