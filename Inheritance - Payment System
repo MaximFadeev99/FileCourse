@@ -1,0 +1,81 @@
+using System;
+
+namespace Lesson
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            PaymentSystem1 paymentSystem1 = new PaymentSystem1();
+            PaymentSystem2 paymentSystem2 = new PaymentSystem2();
+            PaymentSystem3 paymentSystem3 = new PaymentSystem3();
+            Order order = new Order(5, 3215);
+
+            Console.WriteLine(paymentSystem1.GetPayingLink(order));
+            Console.WriteLine(paymentSystem2.GetPayingLink(order));
+            Console.WriteLine(paymentSystem3.GetPayingLink(order));
+            Console.ReadKey();
+        }
+    }
+
+    public class PaymentSystem3 : PaymentSystem1
+    {
+        private string _secretCode;
+        private string _secretCodeFixedPart = "SecretCode";
+        private int _orderNumber = 1;
+
+        public PaymentSystem3() => FixedPart = "system3.com/pay?amount=12000&curency=RUB&hash=";
+
+        protected override void GenerateAddedPart(Order order)
+        {
+            GenerateSecretCode();           
+            AddedPart = order.Amount.ToString() + order.Id.ToString() + _secretCode;
+        }
+
+        private string GenerateSecretCode() 
+        {
+            _secretCode = _secretCodeFixedPart + _orderNumber++;
+            return _secretCode;
+        }
+    }
+
+    public class PaymentSystem2 : PaymentSystem1 
+    {
+        public PaymentSystem2() => FixedPart = "order.system2.ru/pay?hash=";
+
+        protected override void GenerateAddedPart(Order order)
+        {
+            AddedPart = order.Id.ToString() + order.Amount.ToString();
+        }
+    }
+
+    public class PaymentSystem1 : IPaymentSystem
+    {
+        protected string FixedPart = "pay.system1.ru/order?amount = 12000RUB&hash=";
+        protected string AddedPart;
+
+        public string GetPayingLink(Order order)
+        {
+            GenerateAddedPart(order);
+            return FixedPart + AddedPart;
+        }
+
+        protected virtual void GenerateAddedPart(Order order) 
+        {
+            AddedPart = order.Id.ToString();
+        }
+    }
+
+    public class Order
+    {
+        public readonly int Id;
+        public readonly int Amount;
+
+        public Order(int id, int amount) => (Id, Amount) = (id, amount);
+    }
+
+    public interface IPaymentSystem
+    {
+        string GetPayingLink(Order order);
+    }
+}
