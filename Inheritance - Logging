@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Lesson
@@ -7,73 +8,95 @@ namespace Lesson
     {
         static void Main(string[] args)
         {
-            ConsolePathfinder consolePathfinder = new ConsolePathfinder();
-            FilePathfinder filePathfinder = new FilePathfinder();
-            ProtectedConsolePathfinder protectedConsolePathfinder = new ProtectedConsolePathfinder();
-            ProtectedFilePathfinder protectedFilePathfinder = new ProtectedFilePathfinder();
-            FridayPathfinder fridayPathfinder = new FridayPathfinder();
+            Pathfinder pathfinder1 = new Pathfinder(new ConsoleLogger());
+            Pathfinder pathfinder2 = new Pathfinder(new FileLogger("log.txt"));
+            Pathfinder pathfinder3 = new Pathfinder(new DayLogger(new ConsoleLogger(), DayOfWeek.Friday));
+            Pathfinder pathfinder4 = new Pathfinder (new DayLogger(new FileLogger("log.txt"), DayOfWeek.Friday));
+            Pathfinder pathfinder5 = new Pathfinder(new MultyLogger(new List<ILogger> 
+            { new ConsoleLogger(), 
+                new DayLogger(new FileLogger("log.txt"), DayOfWeek.Friday) }));
             string testMessage = "Testing logging system";
 
-            consolePathfinder.Find(testMessage);
-            filePathfinder.Find(testMessage);
-            protectedConsolePathfinder.Find(testMessage);
-            protectedFilePathfinder.Find(testMessage);
-            fridayPathfinder.Find(testMessage);
+            pathfinder1.Find(testMessage);
+            pathfinder2.Find(testMessage);
+            pathfinder3.Find(testMessage);
+            pathfinder4.Find(testMessage);
+            pathfinder5.Find(testMessage);
         }
     }
 
-    public class FridayPathfinder : ProtectedFilePathfinder 
+
+    public class Pathfinder
     {
-        public override void Find(string message)
+        private ILogger _iLogger;
+
+        public Pathfinder (ILogger iLogger)
         {
-            Console.WriteLine(message);
-            base.Find(message);
+            _iLogger = iLogger;
         }
-    }
 
-    public class ProtectedConsolePathfinder : ConsolePathfinder
-    {
-        public override void Find(string message)
+        public void Find(string message) 
         {
-            if (DateTime.Now.DayOfWeek == DayOfWeek.Friday)
-                base.Find(message);
+            _iLogger.TryLog(message);
         }
     }
 
-    public class ProtectedFilePathfinder : FilePathfinder
+    public class FileLogger : ILogger
     {
-        public override void Find(string message)
-        {
-            if (DateTime.Now.DayOfWeek == DayOfWeek.Friday)
-                base.Find(message);
-        }
-    }
-
-    public class ConsolePathfinder : Pathfinder
-    {
-        public override void Find(string message)
-        {
-            Console.WriteLine(message);
-        }
-    }
-
-    public class FilePathfinder : Pathfinder
-    {
-        string fileName = "log.txt";
+        private readonly string _fileName;
         
-        public override void Find(string message)
+        public FileLogger (string fileName) => _fileName = fileName;
+              
+        public void TryLog(string message)
         {
-            File.WriteAllText(fileName, message);
+            File.WriteAllText(_fileName, message);
         }
     }
 
-    public abstract class Pathfinder : ILogger
+    public class ConsoleLogger : ILogger
     {
-        public abstract void Find(string message);
+        public void TryLog(string message)
+        {
+            Console.WriteLine(message);
+        }
     }
 
-    public interface ILogger 
+    public class DayLogger : ILogger
     {
-       void Find(string message);
+        ILogger _iLogger;
+        DayOfWeek _dayOfWeek;
+
+        public DayLogger (ILogger iLogger, DayOfWeek dayOfWeek)
+        {
+            _iLogger = iLogger;
+            _dayOfWeek = dayOfWeek;
+        }
+
+        public void TryLog(string message)
+        {
+            if (DateTime.Now.DayOfWeek == _dayOfWeek)
+                _iLogger.TryLog(message);
+        }
+    }
+
+    public class MultyLogger : ILogger
+    {
+        private List<ILogger> _loggers;
+
+        public MultyLogger(List<ILogger> loggers)
+        {
+            _loggers = loggers;
+        }
+
+        public void TryLog(string message)
+        {
+            foreach (ILogger logger in _loggers)
+                logger.TryLog(message);
+        }
+    }
+
+    public interface ILogger
+    {
+        void TryLog(string message);
     }
 }
