@@ -15,131 +15,131 @@ namespace FileCourse
             _cart = new Cart();
         }
 
-        public void AddToCart(string productName, int requiredQuantity) 
+        public void AddToCart(string goodName, int requiredQuantity)
         {
-            Product requestedProduct = _warehouse.Deliver(productName, requiredQuantity, out int availableQuantity);
+            Good requestedGood = _warehouse.Deliver(goodName, requiredQuantity, out int availableQuantity);
 
-            if (requestedProduct == null)
+            if (requestedGood == null)
             {
-                Console.WriteLine($"{productName} can't be found!");
+                Console.WriteLine($"{goodName} can't be found!");
             }
-            else if (requiredQuantity > availableQuantity) 
+            else if (requiredQuantity > availableQuantity)
             {
-                Console.WriteLine($"The stock of {productName} is insufficient. The product hasn't been added");
+                Console.WriteLine($"The stock of {goodName} is insufficient. The good hasn't been added");
             }
             else
             {
-                _cart.AddItem(requestedProduct, requiredQuantity);
-                Console.WriteLine($"{requiredQuantity} of {productName} added");
+                _cart.AddItem(requestedGood, requiredQuantity);
+                Console.WriteLine($"{requiredQuantity} of {goodName} added");
             }
         }
-       
-        public void MakeOrder() 
+
+        public void MakeOrder()
         {
             string paylink = GeneratePaylink();
-            Dictionary<Product, int> purchasedProducts = _cart.GetAddedProducts(paylink);
+            Dictionary<Good, int> purchasedGoods = _cart.GetAddedGoods(paylink);
 
-            if (purchasedProducts != null) 
-                _warehouse.ReduceStock(purchasedProducts);
+            if (purchasedGoods != null)
+                _warehouse.ReduceStock(purchasedGoods);
         }
 
-        private string GeneratePaylink() 
+        private string GeneratePaylink()
         {
             Random random = new Random();
             int orderCode = random.Next(int.MinValue, int.MaxValue);
             string fixedPart = "CustomerOrderNo";
-            return fixedPart + orderCode;       
+            return fixedPart + orderCode;
         }
 
-        public void ShowAvailableProducts() => _warehouse.ShowStoredProducts();
+        public void ShowAvailablegoods() => _warehouse.ShowStoredGoods();
     }
 
     public class Cart
     {
-        private Dictionary<Product, int> _addedProducts = new Dictionary<Product, int>();
+        private Dictionary<Good, int> _addedGoods = new Dictionary<Good, int>();
 
-        public void AddItem(Product product, int addedQuantity) =>
-            _addedProducts.Add(product, addedQuantity);
+        public void AddItem(Good good, int addedQuantity) =>
+            _addedGoods.Add(good, addedQuantity);
 
-        public void ShowAddedProducts()
+        public void ShowAddedGoods()
         {
-            foreach (var addedProduct in _addedProducts)
-                Console.WriteLine($"{addedProduct.Key.Name} - {addedProduct.Value} шт.");
+            foreach (var addedGood in _addedGoods)
+                Console.WriteLine($"{addedGood.Key.Name} - {addedGood.Value} шт.");
         }
 
-        public Dictionary<Product, int> GetAddedProducts(string paylink) 
+        public Dictionary<Good, int> GetAddedGoods(string paylink)
         {
-            return TryConfirmPayment(paylink) ? _addedProducts : null;         
+            return TryConfirmPayment(paylink) ? _addedGoods : null;
         }
 
-        private bool TryConfirmPayment(string paylink) 
+        private bool TryConfirmPayment(string paylink)
         {
             return true; //для упрощения платеж всегда подтверждается
         }
     }
 
-    public class Warehouse 
+    public class Warehouse
     {
-        private Dictionary<Product, int> _storedProducts = new Dictionary<Product, int>();
+        private Dictionary<Good, int> _storedGoods = new Dictionary<Good, int>();
 
-        public Warehouse() 
+        public Warehouse()
         {
             int IPhone12InitialCount = 20;
             int IPhone11InitialCount = 20;
 
-            _storedProducts.Add(new Product(ProductList.IPhone12), IPhone12InitialCount);
-            _storedProducts.Add(new Product(ProductList.IPhone11), IPhone11InitialCount);
+            _storedGoods.Add(new Good(Goods.IPhone12), IPhone12InitialCount);
+            _storedGoods.Add(new Good(Goods.IPhone11), IPhone11InitialCount);
         }
 
-        public Product Deliver(string requestedProductName, int requestedQuantity, out int deliveredQuantity) 
+        public Good Deliver(string requestedGoodName, int requestedQuantity, out int deliveredQuantity)
         {
-            Product deliveredProduct = _storedProducts.FirstOrDefault
-                (product => product.Key.Name == requestedProductName).Key;
+            Good deliveredGood = _storedGoods.FirstOrDefault
+                (good => good.Key.Name == requestedGoodName).Key;
 
-            if (deliveredProduct != null)
+            if (deliveredGood != null)
             {
-                if (_storedProducts[deliveredProduct] >= requestedQuantity)
+                if (_storedGoods[deliveredGood] >= requestedQuantity)
                 {
                     deliveredQuantity = requestedQuantity;
-                    return deliveredProduct;
+                    return deliveredGood;
                 }
                 else
                 {
                     throw new ArgumentOutOfRangeException(nameof(requestedQuantity));
                 }
             }
-            else 
+            else
             {
-                throw new ArgumentNullException(nameof(requestedProductName));
-            }          
+                throw new ArgumentNullException(nameof(requestedGoodName));
+            }
         }
 
-        public void ReduceStock(Dictionary<Product, int> removedProducts) 
+        public void ReduceStock(Dictionary<Good, int> removedGoods)
         {
-            foreach (var product in removedProducts) 
+            foreach (var good in removedGoods)
             {
-                _storedProducts[product.Key] -= product.Value;
+                _storedGoods[good.Key] -= good.Value;
 
-                if (_storedProducts[product.Key] == 0)
-                    _storedProducts.Remove(product.Key);
-            }           
+                if (_storedGoods[good.Key] == 0)
+                    _storedGoods.Remove(good.Key);
+            }
         }
 
-        public void ShowStoredProducts() 
+        public void ShowStoredGoods()
         {
-            foreach (var storedProduct in _storedProducts) 
-                Console.WriteLine($"{storedProduct.Key.Name} - {storedProduct.Value} шт.");
+            foreach (var storedGood in _storedGoods)
+                Console.WriteLine($"{storedGood.Key.Name} - {storedGood.Value} шт.");
         }
-    }  
+    }
 
-    public class Product 
+    public class Good
     {
         public string Name { get; private set; }
 
-        public Product(string name) => Name = name;
+        public Good(string name) => Name = name;
     }
 
-    public static class ProductList 
+    public static class Goods
     {
         public static readonly string IPhone12 = nameof(IPhone12);
         public static readonly string IPhone11 = nameof(IPhone11);
