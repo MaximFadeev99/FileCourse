@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace FileCourse
 {
-    class Program 
+    class Program
     {
-        public void Main(string[] args) 
+        public static void Main(string[] args)
         {
             Good iPhone12 = new Good("IPhone 12");
             Good iPhone11 = new Good("IPhone 11");
@@ -28,25 +28,25 @@ namespace FileCourse
             Console.WriteLine(cart.Order().Paylink);
 
             cart.Add(iPhone12, 9); //Ошибка, после заказа со склада убираются заказанные товары
-        }   
+        }
     }
 
     public class Shop
     {
+        public Shop(Warehouse warehouse) => Warehouse = warehouse;
+
         public Warehouse Warehouse { get; private set; }
 
-        public Shop(Warehouse warehouse) =>  Warehouse = warehouse;
-
-        public Cart Cart(Shop shop) 
+        public Cart Cart(Shop shop)
         {
             Cart cart = new Cart(shop);
             return cart;
-        }       
+        }
     }
 
     public class Cart
     {
-        private Dictionary<Good, int> _addedGoods = new Dictionary<Good, int>();
+        private Dictionary<Good, int> _goods = new Dictionary<Good, int>();
         private readonly Shop _shop;
 
         public Cart(Shop shop) => _shop = shop;
@@ -64,33 +64,33 @@ namespace FileCourse
 
             if (_shop.Warehouse.TryConfirmAvailability(good, quantity))
             {
-                if (_addedGoods.ContainsKey(good))
+                if (_goods.ContainsKey(good) == false)
                 {
-                    _addedGoods[good] += quantity;
+                    _goods[good] = quantity;
                 }
-                else
+                else 
                 {
-                    _addedGoods.Add(good, quantity);
+                    _goods[good] += quantity;
                 }
             }
-            else 
+            else
             {
-                throw new Exception($"Warehouse lacks the requested good {good}");                
-            }            
+                throw new Exception($"Warehouse lacks the requested good {good}");
+            }
         }
 
-        public PayInfo Order() 
+        public Order Order()
         {
-            foreach (var good in _addedGoods) 
-                _shop.Warehouse.ReduceStock(good);           
+            foreach (var good in _goods)
+                _shop.Warehouse.ReduceStock(good);
 
-            PayInfo payInfo = new PayInfo(GeneratePaylink());
-            return payInfo;
+            Order order = new Order(GeneratePaylink());
+            return order;
         }
 
         public void ShowAddedGoods()
         {
-            foreach (var addedGood in _addedGoods)
+            foreach (var addedGood in _goods)
                 Console.WriteLine($"{addedGood.Key.Name} - {addedGood.Value} шт.");
         }
 
@@ -105,60 +105,60 @@ namespace FileCourse
 
     public class Warehouse
     {
-        private Dictionary<Good, int> _storedGoods = new Dictionary<Good, int>();
+        private Dictionary<Good, int> _goods = new Dictionary<Good, int>();
 
-        public void Delive (Good good, int quantity)
+        public void Delive(Good good, int quantity)
         {
             if (good == null)
             {
                 throw new ArgumentNullException(nameof(good));
             }
-            else if (quantity < 1) 
+            else if (quantity < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(quantity));
             }
 
-            if (_storedGoods.ContainsKey(good))
+            if (_goods.ContainsKey(good))
             {
-                _storedGoods[good] += quantity;
+                _goods[good] += quantity;
             }
-            else 
+            else
             {
-                _storedGoods.Add(good, quantity);
+                _goods.Add(good, quantity);
             }
         }
 
-        public bool TryConfirmAvailability(Good good, int quantity) 
+        public bool TryConfirmAvailability(Good good, int quantity)
         {
-            return _storedGoods.ContainsKey(good) && _storedGoods[good] >= quantity? true : false;
+            return _goods.ContainsKey(good) && _goods[good] >= quantity ? true : false;
         }
 
         public void ReduceStock(KeyValuePair<Good, int> removedGood)
         {
-            _storedGoods[removedGood.Key] -= removedGood.Value;
+            _goods[removedGood.Key] -= removedGood.Value;
 
-            if (_storedGoods[removedGood.Key] == 0)
-                _storedGoods.Remove(removedGood.Key);
+            if (_goods[removedGood.Key] == 0)
+                _goods.Remove(removedGood.Key);
         }
 
         public void ShowStoredGoods()
         {
-            foreach (var storedGood in _storedGoods)
+            foreach (var storedGood in _goods)
                 Console.WriteLine($"{storedGood.Key.Name} - {storedGood.Value} шт.");
         }
     }
 
-    public class PayInfo 
+    public class Order
     {
+        public Order(string paylink) => Paylink = paylink;
+        
         public string Paylink { get; private set; }
-
-        public PayInfo(string paylink) => Paylink = paylink;
     }
 
     public class Good
     {
-        public string Name { get; private set; }
-
         public Good(string name) => Name = name;
+       
+        public string Name { get; private set; }
     }
 }
