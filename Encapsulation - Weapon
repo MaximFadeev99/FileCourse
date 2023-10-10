@@ -19,7 +19,7 @@ namespace FileCourse
     {
         private readonly Weapon _weapon;
 
-        public Bot(Weapon weapon) 
+        public Bot(Weapon weapon)
         {
             if (_weapon == null)
             {
@@ -33,8 +33,10 @@ namespace FileCourse
 
         public void OnSeePlayer(Player player)
         {
-            if (player != null)
-                _weapon.Fire(player);
+            if (player == null)
+                throw new ArgumentNullException(nameof(player));
+
+            _weapon.Fire(player);
         }
     }
 
@@ -44,24 +46,27 @@ namespace FileCourse
         private readonly int _bullersPerShot;
         private int _bullets;
 
-        public Weapon(int bulletsPerShot) 
+        public Weapon(int bulletsPerShot)
         {
-            if (bulletsPerShot < 1)
-            {
+            if (bulletsPerShot <= 0)
                 throw new ArgumentOutOfRangeException(nameof(bulletsPerShot));
-            }
-            else 
-            {
+
                 _bullersPerShot = bulletsPerShot;
-            }
         }
 
         public void Fire(Player player)
         {
-            if (player != null && _bullets > _bullersPerShot)
+            if(player == null)
+                throw new ArgumentNullException(nameof(player));
+            
+            if (_bullets >= _bullersPerShot)
             {
                 player.TakeDamage(_damage);
                 _bullets -= _bullersPerShot;
+            }
+            else
+            {
+                Console.WriteLine("Not enough ammo");
             }
         }
     }
