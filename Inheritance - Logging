@@ -11,9 +11,9 @@ namespace Lesson
             Pathfinder pathfinder1 = new Pathfinder(new ConsoleLogger());
             Pathfinder pathfinder2 = new Pathfinder(new FileLogger("log.txt"));
             Pathfinder pathfinder3 = new Pathfinder(new DayLogger(new ConsoleLogger(), DayOfWeek.Friday));
-            Pathfinder pathfinder4 = new Pathfinder (new DayLogger(new FileLogger("log.txt"), DayOfWeek.Friday));
-            Pathfinder pathfinder5 = new Pathfinder(new MultyLogger(new List<ILogger> 
-            { new ConsoleLogger(), 
+            Pathfinder pathfinder4 = new Pathfinder(new DayLogger(new FileLogger("log.txt"), DayOfWeek.Friday));
+            Pathfinder pathfinder5 = new Pathfinder(new MultyLogger(new List<ILogger>
+            { new ConsoleLogger(),
                 new DayLogger(new FileLogger("log.txt"), DayOfWeek.Friday) }));
             string testMessage = "Testing logging system";
 
@@ -30,25 +30,29 @@ namespace Lesson
     {
         private ILogger _iLogger;
 
-        public Pathfinder (ILogger iLogger) => _iLogger = iLogger;
+        public Pathfinder(ILogger iLogger) => 
+            _iLogger = iLogger;
 
-        public void Find(string message) => _iLogger.TryLog(message);
+        public void Find(string message) => 
+            _iLogger.Log(message);
 
     }
 
     public class FileLogger : ILogger
     {
         private readonly string _fileName;
-        
-        public FileLogger (string fileName) => _fileName = fileName;
-              
-        public void TryLog(string message) => 
+
+        public FileLogger(string fileName) => 
+            _fileName = fileName;
+
+        public void Log(string message) =>
             File.WriteAllText(_fileName, message);
     }
 
     public class ConsoleLogger : ILogger
     {
-        public void TryLog(string message) => Console.WriteLine(message);
+        public void Log(string message) => 
+            Console.WriteLine(message);
     }
 
     public class DayLogger : ILogger
@@ -56,16 +60,16 @@ namespace Lesson
         private readonly ILogger _iLogger;
         private readonly DayOfWeek _dayOfWeek;
 
-        public DayLogger (ILogger iLogger, DayOfWeek dayOfWeek)
+        public DayLogger(ILogger iLogger, DayOfWeek dayOfWeek)
         {
             _iLogger = iLogger;
             _dayOfWeek = dayOfWeek;
         }
 
-        public void TryLog(string message)
+        public void Log(string message)
         {
             if (DateTime.Now.DayOfWeek == _dayOfWeek)
-                _iLogger.TryLog(message);
+                _iLogger.Log(message);
         }
     }
 
@@ -73,18 +77,19 @@ namespace Lesson
     {
         private List<ILogger> _loggers;
 
-        public MultyLogger(List<ILogger> loggers) => _loggers = loggers;
+        public MultyLogger(List<ILogger> loggers) => 
+            _loggers = loggers;
 
 
-        public void TryLog(string message)
+        public void Log(string message)
         {
             foreach (ILogger logger in _loggers)
-                logger.TryLog(message);
+                logger.Log(message);
         }
     }
 
     public interface ILogger
     {
-        void TryLog(string message);
+        void Log(string message);
     }
 }
