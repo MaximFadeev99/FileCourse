@@ -6,41 +6,46 @@ namespace FileCourse
     {
         static void Main(string[] args)
         {
-            PaymentSystem1 paymentSystem1 = new PaymentSystem1("pay.system1.ru/order?amount=12000RUB&hash=");
-            PaymentSystem2 paymentSystem2 = new PaymentSystem2("order.system2.ru/pay?hash=");
-            PaymentSystem3 paymentSystem3 = new PaymentSystem3("system3.com/pay?amount=12000&curency=RUB&hash=");
+            PaymentSystem1 paymentSystem1 = new PaymentSystem1
+                ("pay.system1.ru/order?amount=12000RUB&hash=", new HashService());
+            PaymentSystem2 paymentSystem2 = new PaymentSystem2
+                ("order.system2.ru/pay?hash=", new HashService());
+            PaymentSystem3 paymentSystem3 = new PaymentSystem3
+                ("system3.com/pay?amount=12000&curency=RUB&hash=", new EncryptedHashService());
             Order order = new Order(5, 3215);
 
-            Console.WriteLine(paymentSystem1.GetPayingLink(order));
-            Console.WriteLine(paymentSystem2.GetPayingLink(order));
-            Console.WriteLine(paymentSystem3.GetPayingLink(order));
-            Console.WriteLine(paymentSystem3.GetPayingLink(order));
+            Console.WriteLine(paymentSystem1.GetPayingLink(order, true));
+            Console.WriteLine(paymentSystem2.GetPayingLink(order, false));
+            Console.WriteLine(paymentSystem3.GetPayingLink(order, true));
+            Console.WriteLine(paymentSystem3.GetPayingLink(order, true));
             Console.ReadKey();
         }
     }
 
     public class PaymentSystem3 : PaymentSystem1
     {
-        public PaymentSystem3(string fixedPart) : base(fixedPart) { }
+        public PaymentSystem3(string fixedPart, IHashService hashService) : base(fixedPart, hashService) { }
     }
 
     public class PaymentSystem2 : PaymentSystem1
     {
-        public PaymentSystem2(string fixedPart) : base(fixedPart) { }
+        public PaymentSystem2(string fixedPart, IHashService hashService) : base(fixedPart, hashService) { }
     }
 
     public class PaymentSystem1 : IPaymentSystem
     {
         private string _fixedPart;
+        private IHashService _hashService;
 
-        public PaymentSystem1(string fixedPart)
+        public PaymentSystem1(string fixedPart, IHashService hashService)
         {
             _fixedPart = fixedPart;
+            _hashService = hashService;
         }
 
-        public string GetPayingLink(Order order)
+        public string GetPayingLink(Order order, bool shallAddAmount)
         {
-            return _fixedPart + HashService.GenerateHash(this, order);
+            return _fixedPart + _hashService.GenerateHash(order, shallAddAmount);
         }
     }
 
@@ -53,44 +58,42 @@ namespace FileCourse
         }
 
         public int Id { get; private set; }
-        public int Amount { get; private set; }     
+        public int Amount { get; private set; }
     }
 
-    public static class HashService
+    public class HashService : IHashService
+    {
+        public string GenerateHash(Order order, bool shallAddAmount)
+        {
+            return shallAddAmount ? order.Id.ToString() : 
+                order.Id.ToString() + order.Amount.ToString();
+        }
+    }
+
+    public class EncryptedHashService : IHashService
     {
         private static string _secretCode;
         private static string _secretCodeFixedPart = "SecretCode";
         private static int _orderNumber = 1;
 
-        public static string GenerateHash(IPaymentSystem iPaymentSystem, Order order) 
+        public string GenerateHash(Order order, bool shallAddAmount)
         {
-            if (iPaymentSystem is PaymentSystem3)
-            {
-                GenerateSecretCode();
-                return (order.Id.ToString() + order.Amount.ToString() + _secretCode);               
-            }
-            else if (iPaymentSystem is PaymentSystem2)
-            {
-                return (order.Id.ToString() + order.Amount.ToString());
-            }
-            else if (iPaymentSystem is PaymentSystem1)
-            {
-                return order.Id.ToString();
-            }
-            else 
-            {
-                throw new ArgumentOutOfRangeException(nameof(iPaymentSystem), "Unknown payment system");
-            }
+            GenerateSecretCode();
+            return shallAddAmount ? order.Id.ToString() + _secretCode :
+                order.Id.ToString() + order.Amount.ToString() + _secretCode;
         }
 
-        private static void GenerateSecretCode() 
-        {
+        private void GenerateSecretCode() =>
             _secretCode = _secretCodeFixedPart + _orderNumber++;
-        }
     }
 
     public interface IPaymentSystem
     {
-        string GetPayingLink(Order order);
+        string GetPayingLink(Order order, bool shallAddAmount);
+    }
+
+    public interface IHashService 
+    {
+        string GenerateHash(Order order, bool shallAddAmount); 
     }
 }
