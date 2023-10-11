@@ -4,7 +4,7 @@ class Weapon
 
     private int _bullets;
 
-    public bool CanShoot() => _bullets >= BulletsPerShot;
+    private bool _canShoot = _bullets >= BulletsPerShot;
 
     public void Shoot() => _bullets -= BulletsPerShot;
 }
