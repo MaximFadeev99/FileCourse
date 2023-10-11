@@ -19,7 +19,7 @@ namespace FileCourse
 
             warehouse.ShowStoredGoods(); //Вывод всех товаров на складе с их остатком
 
-            Cart cart = shop.Cart(shop);
+            Cart cart = shop.Cart();
             cart.Add(iPhone12, 4);
             cart.Add(iPhone11, 3); //при такой ситуации возникает ошибка так, как нет нужного количества товара на складе
 
@@ -33,13 +33,14 @@ namespace FileCourse
 
     public class Shop
     {
-        public Shop(Warehouse warehouse) => Warehouse = warehouse;
+        private Warehouse _warehouse;
 
-        public Warehouse Warehouse { get; private set; }
+        public Shop(Warehouse warehouse) => 
+            _warehouse = warehouse;
 
-        public Cart Cart(Shop shop)
+        public Cart Cart()
         {
-            Cart cart = new Cart(shop);
+            Cart cart = new Cart(_warehouse);
             return cart;
         }
     }
@@ -47,9 +48,10 @@ namespace FileCourse
     public class Cart
     {
         private Dictionary<Good, int> _goods = new Dictionary<Good, int>();
-        private readonly Shop _shop;
+        private IWarehouse _warehouse;
 
-        public Cart(Shop shop) => _shop = shop;
+        public Cart(IWarehouse warehouse) => 
+            _warehouse = warehouse;
 
         public void Add(Good good, int quantity)
         {
@@ -62,7 +64,7 @@ namespace FileCourse
                 throw new ArgumentOutOfRangeException(nameof(quantity));
             }
 
-            if (_shop.Warehouse.TryConfirmAvailability(good, quantity))
+            if (_warehouse.TryConfirmAvailability(good, quantity))
             {
                 if (_goods.ContainsKey(good) == false)
                 {
@@ -82,7 +84,7 @@ namespace FileCourse
         public Order Order()
         {
             foreach (var good in _goods)
-                _shop.Warehouse.ReduceStock(good);
+                _warehouse.ReduceStock(good);
 
             Order order = new Order(GeneratePaylink());
             return order;
@@ -103,7 +105,7 @@ namespace FileCourse
         }
     }
 
-    public class Warehouse
+    public class Warehouse : IWarehouse
     {
         private Dictionary<Good, int> _goods = new Dictionary<Good, int>();
 
@@ -118,14 +120,12 @@ namespace FileCourse
                 throw new ArgumentOutOfRangeException(nameof(quantity));
             }
 
-            if (_goods.ContainsKey(good))
+            if (_goods.ContainsKey(good) == false)
             {
-                _goods[good] += quantity;
+                _goods[good] = 0;
             }
-            else
-            {
-                _goods.Add(good, quantity);
-            }
+
+            _goods[good] += quantity;
         }
 
         public bool TryConfirmAvailability(Good good, int quantity)
@@ -150,15 +150,24 @@ namespace FileCourse
 
     public class Order
     {
-        public Order(string paylink) => Paylink = paylink;
+        public Order(string paylink) => 
+            Paylink = paylink;
         
         public string Paylink { get; private set; }
     }
 
     public class Good
     {
-        public Good(string name) => Name = name;
+        public Good(string name) => 
+            Name = name;
        
         public string Name { get; private set; }
+    }
+
+    public interface IWarehouse 
+    {
+        void Delive(Good good, int quantity);
+        bool TryConfirmAvailability(Good good, int quantity);
+        void ReduceStock(KeyValuePair<Good, int> removedGood);
     }
 }
