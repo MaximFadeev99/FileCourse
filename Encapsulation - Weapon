@@ -22,13 +22,9 @@ namespace FileCourse
         public Bot(Weapon weapon)
         {
             if (_weapon == null)
-            {
                 throw new ArgumentNullException(nameof(weapon));
-            }
-            else
-            {
-                _weapon = weapon;
-            }
+
+            _weapon = weapon;
         }
 
         public void OnSeePlayer(Player player)
@@ -51,14 +47,14 @@ namespace FileCourse
             if (bulletsPerShot <= 0)
                 throw new ArgumentOutOfRangeException(nameof(bulletsPerShot));
 
-                _bullersPerShot = bulletsPerShot;
+            _bullersPerShot = bulletsPerShot;
         }
 
         public void Fire(Player player)
         {
-            if(player == null)
+            if (player == null)
                 throw new ArgumentNullException(nameof(player));
-            
+
             if (_bullets >= _bullersPerShot)
             {
                 player.TakeDamage(_damage);
