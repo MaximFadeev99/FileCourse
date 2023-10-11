@@ -28,13 +28,13 @@ namespace Lesson
 
     public class Pathfinder
     {
-        private ILogger _iLogger;
+        private ILogger _logger;
 
-        public Pathfinder(ILogger iLogger) => 
-            _iLogger = iLogger;
+        public Pathfinder(ILogger logger) =>
+            _logger = logger;
 
-        public void Find(string message) => 
-            _iLogger.Log(message);
+        public void Find(string message) =>
+            _logger.Log(message);
 
     }
 
@@ -42,7 +42,7 @@ namespace Lesson
     {
         private readonly string _fileName;
 
-        public FileLogger(string fileName) => 
+        public FileLogger(string fileName) =>
             _fileName = fileName;
 
         public void Log(string message) =>
@@ -51,25 +51,25 @@ namespace Lesson
 
     public class ConsoleLogger : ILogger
     {
-        public void Log(string message) => 
+        public void Log(string message) =>
             Console.WriteLine(message);
     }
 
     public class DayLogger : ILogger
     {
-        private readonly ILogger _iLogger;
+        private readonly ILogger _logger;
         private readonly DayOfWeek _dayOfWeek;
 
-        public DayLogger(ILogger iLogger, DayOfWeek dayOfWeek)
+        public DayLogger(ILogger logger, DayOfWeek dayOfWeek)
         {
-            _iLogger = iLogger;
+            _logger = logger;
             _dayOfWeek = dayOfWeek;
         }
 
         public void Log(string message)
         {
             if (DateTime.Now.DayOfWeek == _dayOfWeek)
-                _iLogger.Log(message);
+                _logger.Log(message);
         }
     }
 
@@ -77,7 +77,7 @@ namespace Lesson
     {
         private List<ILogger> _loggers;
 
-        public MultyLogger(List<ILogger> loggers) => 
+        public MultyLogger(List<ILogger> loggers) =>
             _loggers = loggers;
 
 
