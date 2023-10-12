@@ -57,15 +57,11 @@ namespace FileCourse
             if (player == null)
                 throw new ArgumentNullException(nameof(player));
 
-            if (_canShoot)
-            {
-                player.TakeDamage(_damage);
-                _bullets -= _bullersPerShot;
-            }
-            else
-            {
+            if (_canShoot == false)
                 throw new InvalidOperationException("Not enough ammo");
-            }
+
+            player.TakeDamage(_damage);
+            _bullets -= _bullersPerShot;
         }
     }
 }
