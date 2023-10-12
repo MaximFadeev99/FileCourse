@@ -50,19 +50,21 @@ namespace FileCourse
             _bullersPerShot = bulletsPerShot;
         }
 
+        private bool _canShoot => _bullets >= _bullersPerShot;
+
         public void Fire(Player player)
         {
             if (player == null)
                 throw new ArgumentNullException(nameof(player));
 
-            if (_bullets >= _bullersPerShot)
+            if (_canShoot)
             {
                 player.TakeDamage(_damage);
                 _bullets -= _bullersPerShot;
             }
             else
             {
-                Console.WriteLine("Not enough ammo");
+                throw new InvalidOperationException("Not enough ammo");
             }
         }
     }
