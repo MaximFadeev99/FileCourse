@@ -17,49 +17,52 @@ namespace FileCourse
 
     public class OrderForm
     {
-        private List<PaymentSystem> _paymentSystems = new List<PaymentSystem>
-        {new CardPaymentSystem(),
-        new WebMoneyPaymentSystem(),
-        new QiwiPaymentSystem()};
-               
         public void TryCallPaymentSystem()
         {
             string names = string.Empty;
             string chosenName;
             PaymentSystem chosenSystem;
 
-            for (int i = 0; i < _paymentSystems.Count; i++) 
+            for (int i = 0; i < PaymentSystems.AvailableSystems.Count; i++)
             {
-                if (i != _paymentSystems.Count - 1)
-                    names += $"{_paymentSystems[i].Name}, ";
+                if (i != PaymentSystems.AvailableSystems.Count - 1)
+                    names += $"{PaymentSystems.AvailableSystems[i].Name}, ";
                 else
-                    names += $"{_paymentSystems[i].Name}";
+                    names += $"{PaymentSystems.AvailableSystems[i].Name}";
             }
-            
+
             Console.WriteLine($"Мы принимаем: {names}");
             Console.WriteLine("Какой системой вы хотите совершить оплату?");
             chosenName = Console.ReadLine();
-            chosenSystem = _paymentSystems.FirstOrDefault(paymentSystem => paymentSystem.Name == chosenName);
+            chosenSystem = PaymentSystems.AvailableSystems.FirstOrDefault(paymentSystem => paymentSystem.Name == chosenName);
 
             if (chosenSystem != null)
             {
-                chosenSystem.ExecutePayment();
+                chosenSystem.Pay();
             }
             else
             {
-                throw new ArgumentNullException(nameof(chosenName), 
+                throw new ArgumentNullException(nameof(chosenName),
                     "Указанной платежной системы нет в списке");
             }
         }
     }
-   
+
+    public static class PaymentSystems 
+    {
+        public static IReadOnlyList<PaymentSystem> AvailableSystems = new List<PaymentSystem>
+        {new CardPaymentSystem(),
+        new WebMoneyPaymentSystem(),
+        new QiwiPaymentSystem()};
+    }
+
     public class CardPaymentSystem : PaymentSystem
     {
         public CardPaymentSystem() : base("Card") { }
 
         protected override void CallWebInterface()
         {
-            Console.WriteLine($"Вызов API банка эмитера карты {Name}..."); 
+            Console.WriteLine($"Вызов API банка эмитера карты {Name}...");
             //симуляция веб интерфейса под Card
         }
     }
@@ -92,7 +95,7 @@ namespace FileCourse
 
         public PaymentSystem(string name) => Name = name;
 
-        public virtual void ExecutePayment() 
+        public virtual void Pay()
         {
             CallWebInterface();
             ShowPaymentResult();
@@ -108,8 +111,8 @@ namespace FileCourse
         }
     }
 
-    public interface IPaymentSystem 
+    public interface IPaymentSystem
     {
-        void ExecutePayment();
+        void Pay();
     }
 }
