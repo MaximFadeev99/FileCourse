@@ -10,32 +10,33 @@ namespace FileCourse
                 ("pay.system1.ru/order?amount=12000RUB&hash=", new HashService());
             PaymentSystem2 paymentSystem2 = new PaymentSystem2
                 ("order.system2.ru/pay?hash=", new HashService());
-            PaymentSystem3 paymentSystem3 = new PaymentSystem3
+            PaymentSystem2 paymentSystem3 = new PaymentSystem2
                 ("system3.com/pay?amount=12000&curency=RUB&hash=", new EncryptedHashService());
             Order order = new Order(5, 3215);
 
-            Console.WriteLine(paymentSystem1.GetPayingLink(order, true));
-            Console.WriteLine(paymentSystem2.GetPayingLink(order, false));
-            Console.WriteLine(paymentSystem3.GetPayingLink(order, true));
-            Console.WriteLine(paymentSystem3.GetPayingLink(order, true));
+            Console.WriteLine(paymentSystem1.GetPayingLink(order));
+            Console.WriteLine(paymentSystem2.GetPayingLink(order));
+            Console.WriteLine(paymentSystem3.GetPayingLink(order));
+            Console.WriteLine(paymentSystem3.GetPayingLink(order));
             Console.ReadKey();
         }
     }
 
-    public class PaymentSystem3 : PaymentSystem1
-    {
-        public PaymentSystem3(string fixedPart, IHashService hashService) : base(fixedPart, hashService) { }
-    }
-
     public class PaymentSystem2 : PaymentSystem1
     {
-        public PaymentSystem2(string fixedPart, IHashService hashService) : base(fixedPart, hashService) { }
+        public PaymentSystem2(string fixedPart, IHashService hashService) : 
+            base(fixedPart, hashService) {}
+
+        protected override string GenerateHashMessage(Order order)
+        {
+            return base.GenerateHashMessage(order) + order.Amount.ToString();
+        }
     }
 
     public class PaymentSystem1 : IPaymentSystem
     {
-        private string _fixedPart;
-        private IHashService _hashService;
+        private readonly string _fixedPart;
+        private readonly IHashService _hashService;
 
         public PaymentSystem1(string fixedPart, IHashService hashService)
         {
@@ -43,9 +44,15 @@ namespace FileCourse
             _hashService = hashService;
         }
 
-        public string GetPayingLink(Order order, bool shallAddAmount)
+        public string GetPayingLink(Order order)
         {
-            return _fixedPart + _hashService.GenerateHash(order, shallAddAmount);
+            string hashMessage = GenerateHashMessage(order);
+            return _fixedPart + _hashService.GenerateHash(hashMessage);
+        }
+
+        protected virtual string GenerateHashMessage(Order order)
+        {
+            return order.Id.ToString();
         }
     }
 
@@ -57,43 +64,42 @@ namespace FileCourse
             Amount = amount;
         }
 
-        public int Id { get; private set; }
-        public int Amount { get; private set; }
+        public int Id { get;}
+        public int Amount { get;}
     }
 
     public class HashService : IHashService
     {
-        public string GenerateHash(Order order, bool shallAddAmount)
+        public virtual string GenerateHash(string message)
         {
-            return shallAddAmount ? order.Id.ToString() : 
-                order.Id.ToString() + order.Amount.ToString();
+            string hash = message;
+
+            // do whatever a hash service is supposed to do 
+
+            return hash;
         }
     }
 
-    public class EncryptedHashService : IHashService
+    public class EncryptedHashService : HashService
     {
-        private static string _secretCode;
-        private static string _secretCodeFixedPart = "SecretCode";
+        private const string SecretCodeFixedPart = "SecretCode";
+
         private static int _orderNumber = 1;
 
-        public string GenerateHash(Order order, bool shallAddAmount)
+        public override string GenerateHash(string message)
         {
-            GenerateSecretCode();
-            return shallAddAmount ? order.Id.ToString() + _secretCode :
-                order.Id.ToString() + order.Amount.ToString() + _secretCode;
+            string baseHash = base.GenerateHash(message);
+            return baseHash + SecretCodeFixedPart + _orderNumber++;
         }
-
-        private void GenerateSecretCode() =>
-            _secretCode = _secretCodeFixedPart + _orderNumber++;
     }
 
     public interface IPaymentSystem
     {
-        string GetPayingLink(Order order, bool shallAddAmount);
+        string GetPayingLink(Order order);
     }
 
-    public interface IHashService 
+    public interface IHashService
     {
-        string GenerateHash(Order order, bool shallAddAmount); 
+        string GenerateHash(string message);
     }
 }
