@@ -36,15 +36,10 @@ namespace FileCourse
             chosenName = Console.ReadLine();
             chosenSystem = PaymentSystems.AvailableSystems.FirstOrDefault(paymentSystem => paymentSystem.Name == chosenName);
 
-            if (chosenSystem != null)
-            {
-                chosenSystem.Pay();
-            }
-            else
-            {
-                throw new ArgumentNullException(nameof(chosenName),
-                    "Указанной платежной системы нет в списке");
-            }
+            if (chosenSystem == null)
+                throw new ArgumentNullException(nameof(chosenName), "Указанной платежной системы нет в списке");
+
+            chosenSystem.Pay();
         }
     }
 
