@@ -33,9 +33,9 @@ namespace FileCourse
 
     public class Shop
     {
-        private Warehouse _warehouse;
+        private readonly Warehouse _warehouse;
 
-        public Shop(Warehouse warehouse) => 
+        public Shop(Warehouse warehouse) =>
             _warehouse = warehouse;
 
         public Cart Cart()
@@ -47,44 +47,33 @@ namespace FileCourse
 
     public class Cart
     {
-        private Dictionary<Good, int> _goods = new Dictionary<Good, int>();
-        private IWarehouse _warehouse;
+        private readonly Dictionary<Good, int> _goods = new Dictionary<Good, int>();
+        private readonly IWarehouse _warehouse;
 
-        public Cart(IWarehouse warehouse) => 
+        public Cart(IWarehouse warehouse) =>
             _warehouse = warehouse;
 
         public void Add(Good good, int quantity)
         {
             if (good == null)
-            {
                 throw new ArgumentNullException(nameof(good));
-            }
-            else if (quantity < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(quantity));
-            }
 
-            if (_warehouse.TryConfirmAvailability(good, quantity))
-            {
-                if (_goods.ContainsKey(good) == false)
-                {
-                    _goods[good] = quantity;
-                }
-                else 
-                {
-                    _goods[good] += quantity;
-                }
-            }
-            else
-            {
-                throw new Exception($"Warehouse lacks the requested good {good}");
-            }
+            if (quantity < 1)
+                throw new ArgumentOutOfRangeException(nameof(quantity));
+
+            if (_warehouse.TryConfirmAvailability(good, quantity) == false)
+                throw new InvalidOperationException($"Warehouse lacks the requested good {good}");
+
+            if (_goods.ContainsKey(good) == false)
+                _goods[good] = 0;
+
+                _goods[good] += quantity;
         }
 
         public Order Order()
         {
             foreach (var good in _goods)
-                _warehouse.ReduceStock(good);
+                _warehouse.ReduceStock(good.Key, good.Value);
 
             Order order = new Order(GeneratePaylink());
             return order;
@@ -107,38 +96,33 @@ namespace FileCourse
 
     public class Warehouse : IWarehouse
     {
-        private Dictionary<Good, int> _goods = new Dictionary<Good, int>();
+        private readonly Dictionary<Good, int> _goods = new Dictionary<Good, int>();
 
         public void Delive(Good good, int quantity)
         {
             if (good == null)
-            {
                 throw new ArgumentNullException(nameof(good));
-            }
-            else if (quantity < 1)
-            {
+
+            if (quantity < 1)
                 throw new ArgumentOutOfRangeException(nameof(quantity));
-            }
 
             if (_goods.ContainsKey(good) == false)
-            {
                 _goods[good] = 0;
-            }
 
             _goods[good] += quantity;
         }
 
         public bool TryConfirmAvailability(Good good, int quantity)
         {
-            return _goods.ContainsKey(good) && _goods[good] >= quantity ? true : false;
+            return _goods.ContainsKey(good) && _goods[good] >= quantity;
         }
 
-        public void ReduceStock(KeyValuePair<Good, int> removedGood)
+        public void ReduceStock(Good good, int quantity)
         {
-            _goods[removedGood.Key] -= removedGood.Value;
+            _goods[good] -= quantity;
 
-            if (_goods[removedGood.Key] == 0)
-                _goods.Remove(removedGood.Key);
+            if (_goods[good] == 0)
+                _goods.Remove(good);
         }
 
         public void ShowStoredGoods()
@@ -150,24 +134,23 @@ namespace FileCourse
 
     public class Order
     {
-        public Order(string paylink) => 
+        public Order(string paylink) =>
             Paylink = paylink;
-        
+
         public string Paylink { get; private set; }
     }
 
     public class Good
     {
-        public Good(string name) => 
+        public Good(string name) =>
             Name = name;
-       
-        public string Name { get; private set; }
+
+        public string Name { get; }
     }
 
-    public interface IWarehouse 
+    public interface IWarehouse
     {
-        void Delive(Good good, int quantity);
         bool TryConfirmAvailability(Good good, int quantity);
-        void ReduceStock(KeyValuePair<Good, int> removedGood);
+        void ReduceStock(Good good, int quantity);
     }
 }
