@@ -11,7 +11,7 @@ namespace FileCourse
         BallotSystemProcessor _ballotSystemProcessor = new BallotSystemProcessor();
         
         private void OnButtonClick() =>
-            _ballotSystemProcessor.AnalyzeInput(this.passportTextbox.Text);           
+            _ballotSystemProcessor.AnalyzeInput(passportTextbox.Text);           
     }
 
     public class MessageShower 
