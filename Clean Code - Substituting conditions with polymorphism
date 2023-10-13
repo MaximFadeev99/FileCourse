@@ -9,41 +9,16 @@ namespace FileCourse
         static void Main(string[] args)
         {
             OrderForm orderForm = new OrderForm();
-
-            orderForm.TryCallPaymentSystem();
-            Console.ReadKey();
         }
     }
 
     public class OrderForm
-    {
-        
-        private List<Button> _buttons = new List<Button>();
-
-
-public void TryCallPaymentSystem()
-        {
-            string names = string.Empty;
-            string chosenName;
-            PaymentSystem chosenSystem;
-
-            for (int i = 0; i < PaymentSystems.AvailableSystems.Count; i++)
-            {
-                if (i != PaymentSystems.AvailableSystems.Count - 1)
-                    names += $"{PaymentSystems.AvailableSystems[i].Name}, ";
-                else
-                    names += $"{PaymentSystems.AvailableSystems[i].Name}";
-            }
-
-            Console.WriteLine($"Мы принимаем: {names}");
-            Console.WriteLine("Какой системой вы хотите совершить оплату?");
-            chosenName = Console.ReadLine();
-            chosenSystem = PaymentSystems.AvailableSystems.FirstOrDefault(paymentSystem => paymentSystem.Name == chosenName);
-
-            if (chosenSystem == null)
-                throw new ArgumentNullException(nameof(chosenName), "Указанной платежной системы нет в списке");
-
-            chosenSystem.Pay();
+    {      
+        public OrderForm(List<PaymentSystem> paymentSystems)
+        {    
+            foreach (PaymentSystem paymentSystem in paymentSystems)
+                Button button = new Button (paymentSystem.Name, paymentSystem.SystemId);
+            Console.WriteLine("Выберите способ платежа...");
         }
     }
 
@@ -53,11 +28,21 @@ public void TryCallPaymentSystem()
         {new CardPaymentSystem(),
         new WebMoneyPaymentSystem(),
         new QiwiPaymentSystem()};
+
+        public void TryPay(string systemId)
+        {
+            PaymentSystem chosenSystem = AvailableSystems.FirstOrDefault(paymentSystem => paymentSystem.SystemId == systemId);
+
+            if (chosenSystem?) 
+                throw new ArgumentNullExceeption(nameof(systemId), "Payment system with indicated Id is not registered")
+
+            chosenSystem.Pay();
+        }
     }
 
     public class CardPaymentSystem : PaymentSystem
     {
-        public CardPaymentSystem() : base("Card") { }
+        public CardPaymentSystem() : base("Card", "PS2") { }
 
         protected override void CallWebInterface()
         {
@@ -68,7 +53,7 @@ public void TryCallPaymentSystem()
 
     public class WebMoneyPaymentSystem : PaymentSystem
     {
-        public WebMoneyPaymentSystem() : base("WebMoney") { }
+        public WebMoneyPaymentSystem() : base("WebMoney", "PS1") { }
 
         protected override void CallWebInterface()
         {
@@ -79,7 +64,7 @@ public void TryCallPaymentSystem()
 
     public class QiwiPaymentSystem : PaymentSystem
     {
-        public QiwiPaymentSystem() : base("QIWI") { }
+        public QiwiPaymentSystem() : base("QIWI", "PS0") { }
 
         protected override void CallWebInterface()
         {
@@ -117,14 +102,19 @@ public void TryCallPaymentSystem()
 
     public class Button
     {
+        public string _systemId {get;}
+        public string _caption {get;}
+
         public Button (string systemId, string caption)
         {
-            SystemId = systemId;
-            Caption = caption;
+            _systemId = systemId;
+            _caption = caption;
         }
 
-        public string SystemId {get;}
-        public string Caption {get;}
+        public string OnButtonPressed()
+        {
+            PaymentSystems.TryPay(_systemId)
+        }
     }
 
     public interface IPaymentSystem
