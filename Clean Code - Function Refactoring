@@ -66,8 +66,6 @@ namespace FileCourse
                 connection.Open();
                 SQLiteDataAdapter sqLiteDataAdapter = new SQLiteDataAdapter(new SQLiteCommand(commandText, connection));
                 DataTable dataTable1 = new DataTable();
-                DataTable dataTable2 = dataTable1;
-                sqLiteDataAdapter.Fill(dataTable2);
 
                 if (dataTable1.Rows.Count > 0)
                 {
