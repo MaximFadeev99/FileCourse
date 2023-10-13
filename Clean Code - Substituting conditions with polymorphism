@@ -17,7 +17,11 @@ namespace FileCourse
 
     public class OrderForm
     {
-        public void TryCallPaymentSystem()
+        
+        private List<Button> _buttons = new List<Button>();
+
+
+public void TryCallPaymentSystem()
         {
             string names = string.Empty;
             string chosenName;
@@ -85,12 +89,17 @@ namespace FileCourse
     }
 
     public abstract class PaymentSystem : IPaymentSystem
-    {
-        public string Name { get; private set; }
+    {       
+        public PaymentSystem(string name, int systemId) 
+        {
+            Name = name;
+            SystemId = systemId;
+        }
 
-        public PaymentSystem(string name) => Name = name;
+        public string Name { get;}
+        public int SystemId { get;}
 
-        public virtual void Pay()
+        public void Pay()
         {
             CallWebInterface();
             ShowPaymentResult();
@@ -104,6 +113,18 @@ namespace FileCourse
             Console.WriteLine($"Проверка платежа через {Name}...");
             Console.WriteLine("Оплата прошла успешно!");
         }
+    }
+
+    public class Button
+    {
+        public Button (string systemId, string caption)
+        {
+            SystemId = systemId;
+            Caption = caption;
+        }
+
+        public string SystemId {get;}
+        public string Caption {get;}
     }
 
     public interface IPaymentSystem
