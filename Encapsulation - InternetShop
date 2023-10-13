@@ -17,13 +17,13 @@ namespace FileCourse
             warehouse.Delive(iPhone12, 10);
             warehouse.Delive(iPhone11, 1);
 
-            warehouse.ShowStoredGoods(); //Вывод всех товаров на складе с их остатком
+           //Вывод всех товаров на складе с их остатком
 
             Cart cart = shop.Cart();
             cart.Add(iPhone12, 4);
             cart.Add(iPhone11, 3); //при такой ситуации возникает ошибка так, как нет нужного количества товара на складе
 
-            cart.ShowAddedGoods(); //Вывод всех товаров в корзине
+            //Вывод всех товаров в корзине
 
             Console.WriteLine(cart.Order().Paylink);
 
@@ -38,11 +38,8 @@ namespace FileCourse
         public Shop(Warehouse warehouse) =>
             _warehouse = warehouse;
 
-        public Cart Cart()
-        {
-            Cart cart = new Cart(_warehouse);
-            return cart;
-        }
+        public Cart Cart() =>
+            return new Cart(_warehouse);
     }
 
     public class Cart
@@ -68,6 +65,7 @@ namespace FileCourse
                 _goods[good] = 0;
 
                 _goods[good] += quantity;
+                ShowAddedGoods();
         }
 
         public Order Order()
@@ -75,11 +73,10 @@ namespace FileCourse
             foreach (var good in _goods)
                 _warehouse.ReduceStock(good.Key, good.Value);
 
-            Order order = new Order(GeneratePaylink());
-            return order;
+            return new Order(GeneratePaylink());
         }
 
-        public void ShowAddedGoods()
+        private void ShowAddedGoods()
         {
             foreach (var addedGood in _goods)
                 Console.WriteLine($"{addedGood.Key.Name} - {addedGood.Value} шт.");
@@ -110,12 +107,11 @@ namespace FileCourse
                 _goods[good] = 0;
 
             _goods[good] += quantity;
+            ShowStoredGoods();
         }
 
-        public bool TryConfirmAvailability(Good good, int quantity)
-        {
+        public bool TryConfirmAvailability(Good good, int quantity) =>
             return _goods.ContainsKey(good) && _goods[good] >= quantity;
-        }
 
         public void ReduceStock(Good good, int quantity)
         {
@@ -125,7 +121,7 @@ namespace FileCourse
                 _goods.Remove(good);
         }
 
-        public void ShowStoredGoods()
+        private void ShowStoredGoods()
         {
             foreach (var storedGood in _goods)
                 Console.WriteLine($"{storedGood.Key.Name} - {storedGood.Value} шт.");
@@ -137,7 +133,7 @@ namespace FileCourse
         public Order(string paylink) =>
             Paylink = paylink;
 
-        public string Paylink { get; private set; }
+        public string Paylink { get;}
     }
 
     public class Good
