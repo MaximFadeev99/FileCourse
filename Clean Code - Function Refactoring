@@ -85,19 +85,19 @@ namespace FileCourse
 
         private void DrawResult(OperationCodes result, string passportInput)
         {
-            if (result == OperationCodes.AccessAllowedCode) 
+            if (result == OperationCodes.AccessAllowed) 
             {
                 _viewer.ShowResult($"По паспорту «{passportInput}» доступ к бюллетеню на дистанционном электронном голосовании ПРЕДОСТАВЛЕН");
             }
-            else if (result == OperationCodes.AccessDeniedCode)
+            else if (result == OperationCodes.AccessDenied)
             {
                 _viewer.ShowResult($"По паспорту «{passportInput}» доступ к бюллетеню на дистанционном электронном голосовании НЕ ПРЕДОСТАВЛЕН");
             }
-            else if (result == OperationCodes.NotRegisteredCode)
+            else if (result == OperationCodes.NotRegistered)
             {
                 _viewer.ShowResult($"Паспорт «{passportInput}» в списке участников дистанционного голосования НЕ НАЙДЕН");
             }
-            else if (result == OperationCodes.NotFoundCode)
+            else if (result == OperationCodes.NotFound)
             {
                 _viewer.ShowMessage("Файл db.sqlite не найден. Положите файл в папку вместе с exe.");
             }
@@ -147,9 +147,9 @@ namespace FileCourse
 
     public enum OperationCodes 
     {
-        AccessAllowedCode,
-        AccessDeniedCode,
-        NotRegisteredCode,
-        NotFoundCode,
+        AccessAllowed,
+        AccessDenied,
+        NotRegistered,
+        NotFound,
     }
 }
