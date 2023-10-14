@@ -8,33 +8,80 @@ namespace FileCourse
     {
         static void Main(string[] args)
         {
-            OrderForm orderForm = new OrderForm();
+            PaymentSystemFactory factory = new PaymentSystemFactory();
+
+            factory.Create(typeof(QiwiPaymentSystem));
+            factory.Create(typeof(WebMoneyPaymentSystem));
+            factory.Create(typeof(CardPaymentSystem));
+
+            IReadOnlyList<PaymentSystem> paymentSystems = factory.GetAllSystems();
+            PaymentHandler paymentHandler = new PaymentHandler(paymentSystems);
+            OrderForm orderForm = new OrderForm(paymentSystems, paymentHandler);
         }
     }
 
     public class OrderForm
     {      
-        public OrderForm(List<PaymentSystem> paymentSystems)
-        {    
+        public OrderForm(IReadOnlyList<PaymentSystem> paymentSystems, PaymentHandler paymentHandler)
+        {
+            Button button;
+
             foreach (PaymentSystem paymentSystem in paymentSystems)
-                Button button = new Button (paymentSystem.Name, paymentSystem.SystemId);
+                button = new Button(paymentHandler, paymentSystem.Name, paymentSystem.SystemId);
+
             Console.WriteLine("Выберите способ платежа...");
         }
     }
 
-    public static class PaymentSystems 
+    public class PaymentSystemFactory 
     {
-        public static IReadOnlyList<PaymentSystem> AvailableSystems = new List<PaymentSystem>
-        {new CardPaymentSystem(),
-        new WebMoneyPaymentSystem(),
-        new QiwiPaymentSystem()};
+        private List<PaymentSystem> _createdPaymentSystems = new List<PaymentSystem>();
 
-        public void TryPay(string systemId)
+        public void Create(Type type) 
         {
-            PaymentSystem chosenSystem = AvailableSystems.FirstOrDefault(paymentSystem => paymentSystem.SystemId == systemId);
+            PaymentSystem newPaymentSystem = null;
 
-            if (chosenSystem?) 
-                throw new ArgumentNullExceeption(nameof(systemId), "Payment system with indicated Id is not registered")
+            if (type.Name == "QiwiPaymentSystem")
+            {
+                newPaymentSystem = new QiwiPaymentSystem();
+            }
+            else if (type.Name == "WebMoneyPaymentSystem")
+            {
+                newPaymentSystem = new WebMoneyPaymentSystem();
+            }
+            else if (type.Name == "CardPaymentSystem")
+            {
+                newPaymentSystem = new CardPaymentSystem();
+            }
+            else 
+            {
+                throw new ArgumentException(nameof(type));
+            }
+
+            _createdPaymentSystems.Add(newPaymentSystem);
+        }
+
+        public IReadOnlyList<PaymentSystem> GetAllSystems() 
+        {
+            IReadOnlyList<PaymentSystem> paymentSystems = _createdPaymentSystems;
+            return paymentSystems;
+        }
+    }
+
+    public class PaymentHandler 
+    {
+        private IReadOnlyList<PaymentSystem> _paymentSystems;
+
+        public PaymentHandler(IReadOnlyList<PaymentSystem> paymentSystems) =>
+            _paymentSystems = paymentSystems;
+
+        public void TryPay(string systemId) 
+        {
+            PaymentSystem chosenSystem = _paymentSystems.FirstOrDefault
+                (paymentSystem =>  paymentSystem.SystemId == systemId);
+
+            if (chosenSystem == null) 
+                throw new ArgumentNullException(nameof(systemId));
 
             chosenSystem.Pay();
         }
@@ -74,15 +121,15 @@ namespace FileCourse
     }
 
     public abstract class PaymentSystem : IPaymentSystem
-    {       
-        public PaymentSystem(string name, int systemId) 
+    {
+        public PaymentSystem(string name, string systemId)
         {
             Name = name;
             SystemId = systemId;
         }
 
-        public string Name { get;}
-        public int SystemId { get;}
+        public string Name { get; }
+        public string SystemId { get; }
 
         public void Pay()
         {
@@ -102,18 +149,21 @@ namespace FileCourse
 
     public class Button
     {
-        public string _systemId {get;}
-        public string _caption {get;}
+        private PaymentHandler _paymentHandler;
 
-        public Button (string systemId, string caption)
+        public Button(PaymentHandler paymentHandler, string systemId, string caption)
         {
+            _paymentHandler = paymentHandler;
             _systemId = systemId;
             _caption = caption;
         }
 
-        public string OnButtonPressed()
+        public string _systemId { get; }
+        public string _caption { get; }
+
+        public void OnButtonPressed()
         {
-            PaymentSystems.TryPay(_systemId)
+            _paymentHandler.TryPay(_systemId);
         }
     }
 
