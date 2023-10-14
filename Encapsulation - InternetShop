@@ -17,7 +17,7 @@ namespace FileCourse
             warehouse.Delive(iPhone12, 10);
             warehouse.Delive(iPhone11, 1);
 
-           //Вывод всех товаров на складе с их остатком
+            //Вывод всех товаров на складе с их остатком
 
             Cart cart = shop.Cart();
             cart.Add(iPhone12, 4);
@@ -38,8 +38,10 @@ namespace FileCourse
         public Shop(Warehouse warehouse) =>
             _warehouse = warehouse;
 
-        public Cart Cart() =>
+        public Cart Cart() 
+        {
             return new Cart(_warehouse);
+        }           
     }
 
     public class Cart
@@ -64,8 +66,8 @@ namespace FileCourse
             if (_goods.ContainsKey(good) == false)
                 _goods[good] = 0;
 
-                _goods[good] += quantity;
-                ShowAddedGoods();
+            _goods[good] += quantity;
+            ShowAddedGoods();
         }
 
         public Order Order()
@@ -87,6 +89,7 @@ namespace FileCourse
             Random random = new Random();
             int orderCode = random.Next(int.MinValue, int.MaxValue);
             string fixedPart = "CustomerOrderNo";
+
             return fixedPart + orderCode;
         }
     }
@@ -110,8 +113,10 @@ namespace FileCourse
             ShowStoredGoods();
         }
 
-        public bool TryConfirmAvailability(Good good, int quantity) =>
+        public bool TryConfirmAvailability(Good good, int quantity)
+        {
             return _goods.ContainsKey(good) && _goods[good] >= quantity;
+        } 
 
         public void ReduceStock(Good good, int quantity)
         {
@@ -133,7 +138,7 @@ namespace FileCourse
         public Order(string paylink) =>
             Paylink = paylink;
 
-        public string Paylink { get;}
+        public string Paylink { get; }
     }
 
     public class Good
