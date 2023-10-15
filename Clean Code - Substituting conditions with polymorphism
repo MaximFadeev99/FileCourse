@@ -10,9 +10,9 @@ namespace FileCourse
         {
             PaymentSystemFactory factory = new PaymentSystemFactory();
 
-            factory.Create(typeof(QiwiPaymentSystem));
-            factory.Create(typeof(WebMoneyPaymentSystem));
-            factory.Create(typeof(CardPaymentSystem));
+            factory.Create<QiwiPaymentSystem>(); //переделал фабрику с дженериком после того, как отправил на проверку
+            factory.Create<WebMoneyPaymentSystem>();
+            factory.Create<CardPaymentSystem>();
 
             IReadOnlyList<PaymentSystem> paymentSystems = factory.GetAllSystems();
             PaymentHandler paymentHandler = new PaymentHandler(paymentSystems);
@@ -21,7 +21,7 @@ namespace FileCourse
     }
 
     public class OrderForm
-    {      
+    {
         public OrderForm(IReadOnlyList<PaymentSystem> paymentSystems, PaymentHandler paymentHandler)
         {
             Button button;
@@ -33,54 +33,52 @@ namespace FileCourse
         }
     }
 
-    public class PaymentSystemFactory 
+    public class PaymentSystemFactory
     {
         private List<PaymentSystem> _createdPaymentSystems = new List<PaymentSystem>();
 
-        public void Create(Type type) 
+        public void Create<T>() where T : PaymentSystem
         {
-            PaymentSystem newPaymentSystem = null;
+            T genericInput = null;
 
-            if (type.Name == "QiwiPaymentSystem")
+            if (genericInput is QiwiPaymentSystem)
             {
-                newPaymentSystem = new QiwiPaymentSystem();
+                _createdPaymentSystems.Add(new QiwiPaymentSystem());
             }
-            else if (type.Name == "WebMoneyPaymentSystem")
+            else if (genericInput is WebMoneyPaymentSystem)
             {
-                newPaymentSystem = new WebMoneyPaymentSystem();
+                _createdPaymentSystems.Add(new WebMoneyPaymentSystem());
             }
-            else if (type.Name == "CardPaymentSystem")
+            else if (genericInput is CardPaymentSystem)
             {
-                newPaymentSystem = new CardPaymentSystem();
+                _createdPaymentSystems.Add(new CardPaymentSystem());
             }
-            else 
+            else
             {
-                throw new ArgumentException(nameof(type));
+                throw new ArgumentException(nameof(genericInput));
             }
-
-            _createdPaymentSystems.Add(newPaymentSystem);
         }
 
-        public IReadOnlyList<PaymentSystem> GetAllSystems() 
+        public IReadOnlyList<PaymentSystem> GetAllSystems()
         {
             IReadOnlyList<PaymentSystem> paymentSystems = _createdPaymentSystems;
             return paymentSystems;
         }
     }
 
-    public class PaymentHandler 
+    public class PaymentHandler
     {
         private IReadOnlyList<PaymentSystem> _paymentSystems;
 
         public PaymentHandler(IReadOnlyList<PaymentSystem> paymentSystems) =>
             _paymentSystems = paymentSystems;
 
-        public void TryPay(string systemId) 
+        public void TryPay(string systemId)
         {
             PaymentSystem chosenSystem = _paymentSystems.FirstOrDefault
-                (paymentSystem =>  paymentSystem.SystemId == systemId);
+                (paymentSystem => paymentSystem.SystemId == systemId);
 
-            if (chosenSystem == null) 
+            if (chosenSystem == null)
                 throw new ArgumentNullException(nameof(systemId));
 
             chosenSystem.Pay();
