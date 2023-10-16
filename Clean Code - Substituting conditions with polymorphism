@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace FileCourse
 {
@@ -8,125 +7,108 @@ namespace FileCourse
     {
         static void Main(string[] args)
         {
-            PaymentSystemFactory factory = new PaymentSystemFactory();
-
-            factory.Create<QiwiPaymentSystem>(); //переделал фабрику с дженериком после того, как отправил на проверку
-            factory.Create<WebMoneyPaymentSystem>();
-            factory.Create<CardPaymentSystem>();
-
-            IReadOnlyList<PaymentSystem> paymentSystems = factory.GetAllSystems();
-            PaymentHandler paymentHandler = new PaymentHandler(paymentSystems);
-            OrderForm orderForm = new OrderForm(paymentSystems, paymentHandler);
+            OrderForm orderForm = new OrderForm (PaymentSystemFactory.GetAllIds());
         }
     }
 
     public class OrderForm
     {
-        public OrderForm(IReadOnlyList<PaymentSystem> paymentSystems, PaymentHandler paymentHandler)
+        public OrderForm(IReadOnlyList<string> systemIds )
         {
-            Button button;
+            Console.WriteLine("Введите ID платежной системы:");
 
-            foreach (PaymentSystem paymentSystem in paymentSystems)
-                button = new Button(paymentHandler, paymentSystem.Name, paymentSystem.SystemId);
+            foreach (string systemId in systemIds)
+                Console.WriteLine(systemId);
 
-            Console.WriteLine("Выберите способ платежа...");
+            PaymentSystemFactory.TryPay(Console.ReadLine());
         }
     }
 
-    public class PaymentSystemFactory
+    public static class PaymentSystemFactory
     {
-        private List<PaymentSystem> _createdPaymentSystems = new List<PaymentSystem>();
+        public const string QiwiId = "Qiwi";
+        public const string WebMoneyId = "WebMoney";
+        public const string CardId = "Card";
 
-        public void Create<T>() where T : PaymentSystem
+        public static void TryPay(string systemId)
         {
-            T genericInput = null;
-
-            if (genericInput is QiwiPaymentSystem)
-            {
-                _createdPaymentSystems.Add(new QiwiPaymentSystem());
-            }
-            else if (genericInput is WebMoneyPaymentSystem)
-            {
-                _createdPaymentSystems.Add(new WebMoneyPaymentSystem());
-            }
-            else if (genericInput is CardPaymentSystem)
-            {
-                _createdPaymentSystems.Add(new CardPaymentSystem());
-            }
-            else
-            {
-                throw new ArgumentException(nameof(genericInput));
-            }
-        }
-
-        public IReadOnlyList<PaymentSystem> GetAllSystems()
-        {
-            IReadOnlyList<PaymentSystem> paymentSystems = _createdPaymentSystems;
-            return paymentSystems;
-        }
-    }
-
-    public class PaymentHandler
-    {
-        private IReadOnlyList<PaymentSystem> _paymentSystems;
-
-        public PaymentHandler(IReadOnlyList<PaymentSystem> paymentSystems) =>
-            _paymentSystems = paymentSystems;
-
-        public void TryPay(string systemId)
-        {
-            PaymentSystem chosenSystem = _paymentSystems.FirstOrDefault
-                (paymentSystem => paymentSystem.SystemId == systemId);
-
-            if (chosenSystem == null)
-                throw new ArgumentNullException(nameof(systemId));
-
+            PaymentSystem chosenSystem = Create(systemId);
             chosenSystem.Pay();
+        }
+
+        public static IReadOnlyList<string> GetAllIds() 
+        {
+            IReadOnlyList<string> ids = new List<string>()
+            {
+                QiwiId, WebMoneyId, CardId
+            };
+
+            return ids;     
+        }
+
+        private static PaymentSystem Create(string systemId) 
+        {
+            PaymentSystem paymentSystem;
+
+            if (systemId == QiwiId)
+            {
+                paymentSystem = new QiwiPaymentSystem();
+            }
+            else if (systemId == WebMoneyId)
+            {
+                paymentSystem = new WebMoneyPaymentSystem();
+            }
+            else if (systemId == CardId)
+            {
+                paymentSystem = new CardPaymentSystem();
+            }
+            else 
+            {
+                throw new ArgumentException(nameof(systemId));
+            }
+
+            return paymentSystem;
         }
     }
 
     public class CardPaymentSystem : PaymentSystem
     {
-        public CardPaymentSystem() : base("Card", "PS2") { }
+        public CardPaymentSystem() : base(PaymentSystemFactory.CardId) { }
 
         protected override void CallWebInterface()
         {
-            Console.WriteLine($"Вызов API банка эмитера карты {Name}...");
+            Console.WriteLine($"Вызов API банка эмитера карты {SystemId}...");
             //симуляция веб интерфейса под Card
         }
     }
 
     public class WebMoneyPaymentSystem : PaymentSystem
     {
-        public WebMoneyPaymentSystem() : base("WebMoney", "PS1") { }
+        public WebMoneyPaymentSystem() : base(PaymentSystemFactory.WebMoneyId) { }
 
         protected override void CallWebInterface()
         {
-            Console.WriteLine($"Вызов API {Name}...");
+            Console.WriteLine($"Вызов API {SystemId}...");
             //симуляция веб интерфейса под WebMoney
         }
     }
 
     public class QiwiPaymentSystem : PaymentSystem
     {
-        public QiwiPaymentSystem() : base("QIWI", "PS0") { }
+        public QiwiPaymentSystem() : base(PaymentSystemFactory.QiwiId) { }
 
         protected override void CallWebInterface()
         {
-            Console.WriteLine($"Перевод на страницу {Name}...");
+            Console.WriteLine($"Перевод на страницу {SystemId}...");
             //симуляция веб интерфейса под QIWI
         }
     }
 
     public abstract class PaymentSystem : IPaymentSystem
     {
-        public PaymentSystem(string name, string systemId)
-        {
-            Name = name;
+        public PaymentSystem(string systemId) =>
             SystemId = systemId;
-        }
 
-        public string Name { get; }
         public string SystemId { get; }
 
         public void Pay()
@@ -139,29 +121,10 @@ namespace FileCourse
 
         private void ShowPaymentResult()
         {
-            Console.WriteLine($"Вы оплатили с помощью {Name}");
-            Console.WriteLine($"Проверка платежа через {Name}...");
+            Console.WriteLine($"Вы оплатили с помощью {SystemId}");
+            Console.WriteLine($"Проверка платежа через {SystemId}...");
             Console.WriteLine("Оплата прошла успешно!");
-        }
-    }
-
-    public class Button
-    {
-        private PaymentHandler _paymentHandler;
-
-        public Button(PaymentHandler paymentHandler, string systemId, string caption)
-        {
-            _paymentHandler = paymentHandler;
-            _systemId = systemId;
-            _caption = caption;
-        }
-
-        public string _systemId { get; }
-        public string _caption { get; }
-
-        public void OnButtonPressed()
-        {
-            _paymentHandler.TryPay(_systemId);
+            Console.ReadKey();
         }
     }
 
