@@ -1,3 +1,4 @@
+using Microsoft.SqlServer.Server;
 using System;
 using System.Data;
 using System.IO;
@@ -7,85 +8,35 @@ namespace FileCourse
 {
     public class Presenter
     {
-        private DataBase _dataBase;
-        private Viewer _viewer;
-        private Model _model;
+        private readonly DataBase _dataBase;
+        private readonly IViewer _viewer;
+        private readonly Model _model;
 
-        private void Initialize() 
+        public Presenter (IViewer viewer)
         {
+            _viewer = viewer ?? throw new ArgumentNullException(nameof(viewer));
             _dataBase = new DataBase();
-            _viewer = new Viewer(this);
-            _model = new Model(_viewer, _dataBase);
+            _model = new Model();
         }
 
-        public void StartVerification(string passportInput) => 
-            _model.ValidatePassportInput(passportInput);
-    }
-
-    public class Viewer
-    {
-        private readonly Presenter _presenter;
-
-        public Viewer (Presenter presenter) =>
-            _presenter = presenter;
-
-        public void ShowMessage(string message) 
+        public void StartVerification(string passportInput)
         {
-            MessageBox.Show(message);
-        }
-
-        public void ShowResult(string result) 
-        {
-            textResult.Text = result;
-        }
-
-        private void OnButtonClick() 
-        {
-            string rawData = passportTextbox.Text.Trim();
-
-            if (rawData == "")
+            if (_model.ValidatePassportInput(passportInput, out string commandText, out string connectionString) == false)
             {
-                ShowMessage("Введите серию и номер паспорта");
+                _viewer.ShowMessage("Неверный формат серии или номера паспорта");
             }
             else 
             {
-                rawData.Replace(" ", string.Empty);
-                _presenter.StartVerification(rawData);
-            }       
-        }
-    }
-
-    public class Model
-    {
-        private const int PassportNumbersCount = 10;
-
-        private readonly Viewer _viewer;
-        private readonly DataBase _dataBase;
-
-        public Model(Viewer viewer, DataBase dataBase) 
-        {
-            _viewer = viewer;
-            _dataBase = dataBase;
-        }
-        
-        public void ValidatePassportInput(string passportInput) 
-        {
-            if (passportInput.Length < PassportNumbersCount) 
-            {
-                _viewer.ShowResult("Неверный формат серии или номера паспорта");
-            }
-            else
-            {
-                string commandText = string.Format("select * from passports where num='{0}' limit 1;", (object)Form1.ComputeSha256Hash(passportInput));
-                string connectionString = string.Format("Data Source=" + Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\db.sqlite");
-                OperationCodes result = (OperationCodes)_dataBase.SearchForBallot(commandText, connectionString);
+                DataTable dataTable = _dataBase.Create(commandText, connectionString);
+                OperationCodes result = _model.FindBallotInTable(dataTable);
+                _dataBase.CloseConnection();
                 DrawResult(result, passportInput);
             }
         }
 
         private void DrawResult(OperationCodes result, string passportInput)
         {
-            if (result == OperationCodes.AccessAllowed) 
+            if (result == OperationCodes.AccessAllowed)
             {
                 _viewer.ShowResult($"По паспорту «{passportInput}» доступ к бюллетеню на дистанционном электронном голосовании ПРЕДОСТАВЛЕН");
             }
@@ -104,52 +55,125 @@ namespace FileCourse
         }
     }
 
-    public class DataBase 
+    public class Viewer : IViewer
     {
-        public int SearchForBallot(string commandText, string connectionString) 
+        private Presenter _presenter;
+
+        public Presenter Create() 
+        {
+            _presenter = new Presenter(this);
+            return _presenter;
+        }
+
+        public void ShowMessage(string message)
+        {
+            MessageBox.Show(message);
+        }
+
+        public void ShowResult(string result)
+        {
+            textResult.Text = result;
+        }
+
+        public void OnButtonClick()
+        {
+            string rawData = passportTextbox.Text.Trim();
+
+            if (rawData == "")
+            {
+                ShowMessage("Введите серию и номер паспорта");
+            }
+            else
+            {
+                rawData.Replace(" ", string.Empty);
+                _presenter.StartVerification(rawData);
+            }
+        }
+    }
+
+    public class Model
+    {
+        private const int PassportNumbersCount = 10;
+
+        public bool ValidatePassportInput(string passportInput, out string commandText, out string connectionString)
+        {
+            if (passportInput.Length < PassportNumbersCount)
+            {
+                commandText = string.Empty;
+                connectionString = string.Empty;
+                return false;             
+            }
+            else
+            {                            
+                commandText = string.Format("select * from passports where num='{0}' limit 1;", (object)Form1.ComputeSha256Hash(passportInput));
+                connectionString = string.Format("Data Source=" + Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\db.sqlite");
+                return true;
+            }
+        }
+
+        public OperationCodes FindBallotInTable(DataTable dataTable) 
         {
             try
             {
-                SQLiteConnection connection = new SQLiteConnection(connectionString);
-                connection.Open();
-                SQLiteDataAdapter sqLiteDataAdapter = new SQLiteDataAdapter(new SQLiteCommand(commandText, connection));
-                DataTable dataTable1 = new DataTable();
-                int result;
+                OperationCodes result;
 
-                if (dataTable1.Rows.Count > 0)
+                if (dataTable.Rows.Count > 0)
                 {
-                    if (Convert.ToBoolean(dataTable1.Rows[0].ItemArray[1]))
+                    if (Convert.ToBoolean(dataTable.Rows[0].ItemArray[1]))
                     {
-                        result = 0;
+                        result = OperationCodes.AccessAllowed;
                     }
                     else
                     {
-                        result = 1;
+                        result = OperationCodes.AccessDenied;
                     }
                 }
-                else 
+                else
                 {
-                    result = 2;
+                    result = OperationCodes.NotRegistered;
                 }
-                
-                connection.Close();
+
                 return result;
             }
             catch (SQLiteException ex)
             {
                 if (ex.ErrorCode != 1)
                     throw new Exception();
-;                
-                return 3;
+                ;
+                return OperationCodes.NotFound;
             }
-        }  
+        }
     }
 
-    public enum OperationCodes 
+    public class DataBase
+    {
+        SQLiteConnection _connection;
+
+        public DataTable Create(string commandText, string connectionString)
+        {
+            _connection = new SQLiteConnection(connectionString);
+            _connection.Open();
+            SQLiteDataAdapter sqLiteDataAdapter = new SQLiteDataAdapter(new SQLiteCommand(commandText, _connection));
+            DataTable dataTable1 = new DataTable();
+            return dataTable1;
+        }
+
+        public void CloseConnection() => _connection.Close();
+    }
+
+    public enum OperationCodes
     {
         AccessAllowed,
         AccessDenied,
         NotRegistered,
         NotFound,
+    }
+
+    public interface IViewer 
+    {
+        Presenter Create();
+        void ShowMessage(string message);
+        void ShowResult(string result);
+        void OnButtonClick();
     }
 }
