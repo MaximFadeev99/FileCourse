@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace FileCourse
 {
@@ -6,53 +7,39 @@ namespace FileCourse
     {
         static void Main(string[] args)
         {
-            PaymentSystem1 paymentSystem1 = new PaymentSystem1
-                ("pay.system1.ru/order?amount=12000RUB&hash=", new HashService());
-            PaymentSystem2 paymentSystem2 = new PaymentSystem2
-                ("order.system2.ru/pay?hash=", new HashService());
-            PaymentSystem2 paymentSystem3 = new PaymentSystem2
-                ("system3.com/pay?amount=12000&curency=RUB&hash=", new EncryptedHashService());
+            List<PaymentSystem> _paymentSystems = new List<PaymentSystem>()
+            {new PaymentSystem 
+             ("pay.system1.ru/order?amount=12000RUB&hash=", new HashService(), new IdHashMessage()),
+             new PaymentSystem 
+             ("order.system2.ru/pay?hash=", new HashService(), new IdSumHashMessage()),
+             new PaymentSystem 
+             ("system3.com/pay?amount=12000&curency=RUB&hash=", new EncryptedHashService(), new SumIdHashMessage())};          
             Order order = new Order(5, 3215);
 
-            Console.WriteLine(paymentSystem1.GetPayingLink(order));
-            Console.WriteLine(paymentSystem2.GetPayingLink(order));
-            Console.WriteLine(paymentSystem3.GetPayingLink(order));
-            Console.WriteLine(paymentSystem3.GetPayingLink(order));
+            foreach (PaymentSystem paymentSystem in _paymentSystems)
+                Console.WriteLine(paymentSystem.GetPayingLink(order));
+
             Console.ReadKey();
         }
     }
 
-    public class PaymentSystem2 : PaymentSystem1
-    {
-        public PaymentSystem2(string fixedPart, IHashService hashService) : 
-            base(fixedPart, hashService) {}
-
-        protected override string GenerateHashMessage(Order order)
-        {
-            return base.GenerateHashMessage(order) + order.Amount.ToString();
-        }
-    }
-
-    public class PaymentSystem1 : IPaymentSystem
+    public class PaymentSystem : IPaymentSystem
     {
         private readonly string _fixedPart;
         private readonly IHashService _hashService;
+        private readonly IHashMessage _hashMessage;
 
-        public PaymentSystem1(string fixedPart, IHashService hashService)
+        public PaymentSystem(string fixedPart, IHashService hashService, IHashMessage hashMessage)
         {
             _fixedPart = fixedPart;
             _hashService = hashService;
+            _hashMessage = hashMessage;
         }
 
         public string GetPayingLink(Order order)
         {
-            string hashMessage = GenerateHashMessage(order);
-            return _fixedPart + _hashService.GenerateHash(hashMessage);
-        }
-
-        protected virtual string GenerateHashMessage(Order order)
-        {
-            return order.Id.ToString();
+            string input =_hashMessage.GenerateHashMessage(order);
+            return _fixedPart + _hashService.GenerateHash(input);
         }
     }
 
@@ -64,8 +51,8 @@ namespace FileCourse
             Amount = amount;
         }
 
-        public int Id { get;}
-        public int Amount { get;}
+        public int Id { get; }
+        public int Amount { get; }
     }
 
     public class HashService : IHashService
@@ -93,6 +80,30 @@ namespace FileCourse
         }
     }
 
+    public class IdHashMessage : IHashMessage
+    {
+        public virtual string GenerateHashMessage(Order order)
+        {
+            return order.Id.ToString();
+        }
+    }
+
+    public class IdSumHashMessage : IdHashMessage 
+    {
+        public override string GenerateHashMessage(Order order)
+        {
+            return base.GenerateHashMessage(order) + order.Amount.ToString();
+        }
+    }
+
+    public class SumIdHashMessage : IdHashMessage
+    {
+        public override string GenerateHashMessage(Order order)
+        {
+            return order.Amount.ToString() + base.GenerateHashMessage(order);
+        }
+    }
+
     public interface IPaymentSystem
     {
         string GetPayingLink(Order order);
@@ -100,6 +111,11 @@ namespace FileCourse
 
     public interface IHashService
     {
-        string GenerateHash(string message);
+        string GenerateHash(string input);
+    }
+
+    public interface IHashMessage 
+    {
+        string GenerateHashMessage(Order order);
     }
 }
