@@ -8,12 +8,12 @@ namespace FileCourse
         static void Main(string[] args)
         {
             List<PaymentSystem> _paymentSystems = new List<PaymentSystem>()
-            {new PaymentSystem 
+            {new PaymentSystem
              ("pay.system1.ru/order?amount=12000RUB&hash=", new HashService(), new IdHashMessage()),
-             new PaymentSystem 
+             new PaymentSystem
              ("order.system2.ru/pay?hash=", new HashService(), new IdSumHashMessage()),
-             new PaymentSystem 
-             ("system3.com/pay?amount=12000&curency=RUB&hash=", new EncryptedHashService(), new SumIdHashMessage())};          
+             new PaymentSystem
+             ("system3.com/pay?amount=12000&curency=RUB&hash=", new EncryptedHashService(), new SumIdHashMessage())};
             Order order = new Order(5, 3215);
 
             foreach (PaymentSystem paymentSystem in _paymentSystems)
@@ -38,7 +38,7 @@ namespace FileCourse
 
         public string GetPayingLink(Order order)
         {
-            string input =_hashMessage.GenerateHashMessage(order);
+            string input = _hashMessage.MessageCompiler(order);
             return _fixedPart + _hashService.GenerateHash(input);
         }
     }
@@ -82,25 +82,31 @@ namespace FileCourse
 
     public class IdHashMessage : IHashMessage
     {
-        public virtual string GenerateHashMessage(Order order)
+        public Func<Order, string> MessageCompiler => GenerateHashMessage;
+
+        public string GenerateHashMessage(Order order)
         {
             return order.Id.ToString();
         }
     }
 
-    public class IdSumHashMessage : IdHashMessage 
+    public class IdSumHashMessage : IHashMessage
     {
-        public override string GenerateHashMessage(Order order)
+        public Func<Order, string> MessageCompiler => GenerateHashMessage;
+
+        public string GenerateHashMessage(Order order)
         {
-            return base.GenerateHashMessage(order) + order.Amount.ToString();
+            return order.Id.ToString() + order.Amount.ToString();
         }
     }
 
-    public class SumIdHashMessage : IdHashMessage
+    public class SumIdHashMessage : IHashMessage
     {
-        public override string GenerateHashMessage(Order order)
+        public Func<Order, string> MessageCompiler => GenerateHashMessage;
+
+        public string GenerateHashMessage(Order order)
         {
-            return order.Amount.ToString() + base.GenerateHashMessage(order);
+            return order.Amount.ToString() + order.Id.ToString();
         }
     }
 
@@ -114,8 +120,10 @@ namespace FileCourse
         string GenerateHash(string input);
     }
 
-    public interface IHashMessage 
+    public interface IHashMessage
     {
+        Func<Order, string> MessageCompiler { get;}
+
         string GenerateHashMessage(Order order);
     }
 }
