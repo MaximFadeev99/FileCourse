@@ -12,45 +12,61 @@ namespace FileCourse
         private readonly IViewer _viewer;
         private readonly Model _model;
 
-        public Presenter (IViewer viewer)
+        public Presenter(IViewer viewer)
         {
             _viewer = viewer ?? throw new ArgumentNullException(nameof(viewer));
             _dataBase = new DataBase();
             _model = new Model();
         }
 
+        public void AssessInput(string rawData) 
+        {
+            if (rawData == "")
+            {
+                _viewer.ShowMessage("Введите серию и номер паспорта");
+            }
+            else
+            {
+                rawData.Replace(" ", string.Empty);
+                StartVerification(rawData);
+            }
+        }
+
         public void StartVerification(string passportInput)
         {
-            if (_model.ValidatePassportInput(passportInput, out string commandText, out string connectionString) == false)
+            if (_dataBase.ValidatePassportInput(passportInput) == false)
             {
                 _viewer.ShowMessage("Неверный формат серии или номера паспорта");
             }
-            else 
+            else
             {
+                string commandText = _dataBase.GenerateCommandText(passportInput, out string connectionString);
                 DataTable dataTable = _dataBase.Create(commandText, connectionString);
-                OperationCodes result = _model.FindBallotInTable(dataTable);
-                _dataBase.CloseConnection();
+
+                if (dataTable == null) 
+                {
+                    _viewer.ShowMessage("Файл db.sqlite не найден. Положите файл в папку вместе с exe.");
+                    return;
+                }
+
+                string result = _model.FindBallotInTable(dataTable);              
                 DrawResult(result, passportInput);
             }
         }
 
-        private void DrawResult(OperationCodes result, string passportInput)
+        private void DrawResult(string result, string passportInput)
         {
-            if (result == OperationCodes.AccessAllowed)
+            if (result == Model.AccessAllowed)
             {
                 _viewer.ShowResult($"По паспорту «{passportInput}» доступ к бюллетеню на дистанционном электронном голосовании ПРЕДОСТАВЛЕН");
             }
-            else if (result == OperationCodes.AccessDenied)
+            else if (result == Model.AccessDenied)
             {
                 _viewer.ShowResult($"По паспорту «{passportInput}» доступ к бюллетеню на дистанционном электронном голосовании НЕ ПРЕДОСТАВЛЕН");
             }
-            else if (result == OperationCodes.NotRegistered)
+            else if (result == Model.NotRegistered)
             {
                 _viewer.ShowResult($"Паспорт «{passportInput}» в списке участников дистанционного голосования НЕ НАЙДЕН");
-            }
-            else if (result == OperationCodes.NotFound)
-            {
-                _viewer.ShowMessage("Файл db.sqlite не найден. Положите файл в папку вместе с exe.");
             }
         }
     }
@@ -59,121 +75,97 @@ namespace FileCourse
     {
         private Presenter _presenter;
 
-        public Presenter Create() 
-        {
-            _presenter = new Presenter(this);
-            return _presenter;
-        }
+        public Viewer() =>
+            _presenter = new Presenter(this);      
 
         public void ShowMessage(string message)
         {
-            MessageBox.Show(message);
+            _messageBox.Show(message);
         }
 
         public void ShowResult(string result)
         {
-            textResult.Text = result;
+            _textResult.Text = result;
         }
 
         public void OnButtonClick()
         {
-            string rawData = passportTextbox.Text.Trim();
-
-            if (rawData == "")
-            {
-                ShowMessage("Введите серию и номер паспорта");
-            }
-            else
-            {
-                rawData.Replace(" ", string.Empty);
-                _presenter.StartVerification(rawData);
-            }
+            string rawData = _passportTextbox.Text.Trim();
+            _presenter.AssessInput(rawData);
         }
     }
 
     public class Model
     {
-        private const int PassportNumbersCount = 10;
-
-        public bool ValidatePassportInput(string passportInput, out string commandText, out string connectionString)
+        public static readonly string AccessAllowed = nameof(AccessAllowed);
+        public static readonly string AccessDenied = nameof(AccessDenied);
+        public static readonly string NotRegistered = nameof(NotRegistered);
+       
+        public string FindBallotInTable(DataTable dataTable)
         {
-            if (passportInput.Length < PassportNumbersCount)
-            {
-                commandText = string.Empty;
-                connectionString = string.Empty;
-                return false;             
-            }
-            else
-            {                            
-                commandText = string.Format("select * from passports where num='{0}' limit 1;", (object)Form1.ComputeSha256Hash(passportInput));
-                connectionString = string.Format("Data Source=" + Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\db.sqlite");
-                return true;
-            }
-        }
+            string result;
 
-        public OperationCodes FindBallotInTable(DataTable dataTable) 
-        {
-            try
+            if (dataTable.Rows.Count > 0)
             {
-                OperationCodes result;
-
-                if (dataTable.Rows.Count > 0)
+                if (Convert.ToBoolean(dataTable.Rows[0].ItemArray[1]))
                 {
-                    if (Convert.ToBoolean(dataTable.Rows[0].ItemArray[1]))
-                    {
-                        result = OperationCodes.AccessAllowed;
-                    }
-                    else
-                    {
-                        result = OperationCodes.AccessDenied;
-                    }
+                    result = AccessAllowed;
                 }
                 else
                 {
-                    result = OperationCodes.NotRegistered;
+                    result = AccessDenied;
                 }
-
-                return result;
             }
-            catch (SQLiteException ex)
+            else
             {
-                if (ex.ErrorCode != 1)
-                    throw new Exception();
-                ;
-                return OperationCodes.NotFound;
+                result = NotRegistered;
             }
+
+            return result;
         }
     }
 
     public class DataBase
     {
-        SQLiteConnection _connection;
+        private const int PassportNumbersCount = 10;
+
+        public bool ValidatePassportInput(string passportInput)
+        {
+            return passportInput.Length < PassportNumbersCount;                    
+        }
+
+        public string GenerateCommandText(string passportInput, out string connectionString) 
+        {
+            string commandText = string.Format("select * from passports where num='{0}' limit 1;", (object)Form1.ComputeSha256Hash(passportInput));
+            connectionString = string.Format("Data Source=" + Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\db.sqlite");
+
+            return commandText;
+        }
 
         public DataTable Create(string commandText, string connectionString)
         {
-            _connection = new SQLiteConnection(connectionString);
-            _connection.Open();
-            SQLiteDataAdapter sqLiteDataAdapter = new SQLiteDataAdapter(new SQLiteCommand(commandText, _connection));
-            DataTable dataTable1 = new DataTable();
-            return dataTable1;
+            try
+            {
+                SQLiteConnection connection = new SQLiteConnection(connectionString);
+                connection.Open();  
+                SQLiteDataAdapter sqLiteDataAdapter = new SQLiteDataAdapter(new SQLiteCommand(commandText, _connection));
+                DataTable dataTable1 = new DataTable();
+                connection.Close();
+                return dataTable1;
+            }
+            catch (SQLiteException ex) 
+            {
+                if (ex.ErrorCode != 1)
+                    throw new Exception();
+
+                return null;
+            }
         }
-
-        public void CloseConnection() => _connection.Close();
     }
 
-    public enum OperationCodes
+    public interface IViewer
     {
-        AccessAllowed,
-        AccessDenied,
-        NotRegistered,
-        NotFound,
-    }
-
-    public interface IViewer 
-    {
-        Presenter Create();
         void ShowMessage(string message);
         void ShowResult(string result);
-        void OnButtonClick();
     }
 }
