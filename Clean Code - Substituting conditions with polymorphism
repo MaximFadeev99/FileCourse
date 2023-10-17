@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace FileCourse
 {
@@ -7,65 +8,42 @@ namespace FileCourse
     {
         static void Main(string[] args)
         {
-            OrderForm orderForm = new OrderForm (PaymentSystemFactory.GetAllIds());
+            OrderForm orderForm = new OrderForm();
         }
     }
 
     public class OrderForm
     {
-        public OrderForm(IReadOnlyList<string> systemIds )
+        public OrderForm()
         {
             Console.WriteLine("Введите ID платежной системы:");
-
-            foreach (string systemId in systemIds)
-                Console.WriteLine(systemId);
-
             PaymentSystemFactory.TryPay(Console.ReadLine());
         }
     }
 
     public static class PaymentSystemFactory
     {
-        public const string QiwiId = "Qiwi";
-        public const string WebMoneyId = "WebMoney";
-        public const string CardId = "Card";
-
+        private static List<PaymentSystem> _systemIds = new List<PaymentSystem>();
+        
+        static PaymentSystemFactory() 
+        {
+            _systemIds.Add(new QiwiPaymentSystem());
+            _systemIds.Add(new WebMoneyPaymentSystem());
+            _systemIds.Add(new CardPaymentSystem());
+        }
+        
         public static void TryPay(string systemId)
         {
-            PaymentSystem chosenSystem = Create(systemId);
+            PaymentSystem chosenSystem = FindById(systemId);
             chosenSystem.Pay();
         }
 
-        public static IReadOnlyList<string> GetAllIds() 
+        private static PaymentSystem FindById(string systemId)
         {
-            IReadOnlyList<string> ids = new List<string>()
-            {
-                QiwiId, WebMoneyId, CardId
-            };
+            PaymentSystem paymentSystem = _systemIds.FirstOrDefault(system => system.SystemId == systemId);
 
-            return ids;     
-        }
-
-        private static PaymentSystem Create(string systemId) 
-        {
-            PaymentSystem paymentSystem;
-
-            if (systemId == QiwiId)
-            {
-                paymentSystem = new QiwiPaymentSystem();
-            }
-            else if (systemId == WebMoneyId)
-            {
-                paymentSystem = new WebMoneyPaymentSystem();
-            }
-            else if (systemId == CardId)
-            {
-                paymentSystem = new CardPaymentSystem();
-            }
-            else 
-            {
-                throw new ArgumentException(nameof(systemId));
-            }
+            if (paymentSystem == null) 
+                throw new ArgumentNullException(nameof(systemId));
 
             return paymentSystem;
         }
@@ -73,7 +51,7 @@ namespace FileCourse
 
     public class CardPaymentSystem : PaymentSystem
     {
-        public CardPaymentSystem() : base(PaymentSystemFactory.CardId) { }
+        public CardPaymentSystem() : base("Card") { }
 
         protected override void CallWebInterface()
         {
@@ -84,7 +62,7 @@ namespace FileCourse
 
     public class WebMoneyPaymentSystem : PaymentSystem
     {
-        public WebMoneyPaymentSystem() : base(PaymentSystemFactory.WebMoneyId) { }
+        public WebMoneyPaymentSystem() : base("WebMoney") { }
 
         protected override void CallWebInterface()
         {
@@ -95,7 +73,7 @@ namespace FileCourse
 
     public class QiwiPaymentSystem : PaymentSystem
     {
-        public QiwiPaymentSystem() : base(PaymentSystemFactory.QiwiId) { }
+        public QiwiPaymentSystem() : base("Qiwi") { }
 
         protected override void CallWebInterface()
         {
