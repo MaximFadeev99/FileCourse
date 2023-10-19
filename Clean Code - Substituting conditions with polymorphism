@@ -8,30 +8,38 @@ namespace FileCourse
     {
         static void Main(string[] args)
         {
-            OrderForm orderForm = new OrderForm();
+            OrderForm orderForm = new OrderForm(PaymentHandler.SystemIds);
         }
     }
 
     public class OrderForm
     {
-        public OrderForm()
+        public OrderForm(IEnumerable<string> systemIds)
         {
             Console.WriteLine("Введите ID платежной системы:");
-            PaymentSystemFactory.TryPay(Console.ReadLine());
+
+            foreach (string systemId in systemIds)
+                Console.WriteLine(systemId);
+
+            PaymentHandler.TryPay(Console.ReadLine());
         }
     }
 
-    public static class PaymentSystemFactory
+    public static class PaymentHandler
     {
-        private static List<PaymentSystem> _systemIds = new List<PaymentSystem>();
-        
-        static PaymentSystemFactory() 
+        private readonly static List<PaymentSystem> _paymentSystems = new List<PaymentSystem>();
+        private readonly static IEnumerable<string> _systemIds = new List<string>();
+
+        static PaymentHandler()
         {
-            _systemIds.Add(new QiwiPaymentSystem());
-            _systemIds.Add(new WebMoneyPaymentSystem());
-            _systemIds.Add(new CardPaymentSystem());
+            _paymentSystems.Add(new QiwiPaymentSystem());
+            _paymentSystems.Add(new WebMoneyPaymentSystem());
+            _paymentSystems.Add(new CardPaymentSystem());
+            _systemIds = _paymentSystems.Select(paymentSystem => paymentSystem.SystemId);
         }
-        
+
+        public static IEnumerable<string> SystemIds => _systemIds;
+
         public static void TryPay(string systemId)
         {
             PaymentSystem chosenSystem = FindById(systemId);
@@ -40,9 +48,9 @@ namespace FileCourse
 
         private static PaymentSystem FindById(string systemId)
         {
-            PaymentSystem paymentSystem = _systemIds.FirstOrDefault(system => system.SystemId == systemId);
+            PaymentSystem paymentSystem = _paymentSystems.FirstOrDefault(system => system.SystemId == systemId);
 
-            if (paymentSystem == null) 
+            if (paymentSystem == null)
                 throw new ArgumentNullException(nameof(systemId));
 
             return paymentSystem;
