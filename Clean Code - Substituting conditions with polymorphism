@@ -9,19 +9,29 @@ namespace FileCourse
         static void Main(string[] args)
         {
             OrderForm orderForm = new OrderForm(PaymentHandler.SystemIds);
+            string chosenSystemId = orderForm.InquireSystemID();
+            PaymentHandler.TryPay(chosenSystemId);
         }
     }
 
     public class OrderForm
     {
-        public OrderForm(IEnumerable<string> systemIds)
+        private readonly IEnumerable<string> _systemIds;
+        
+        public OrderForm(IEnumerable<string> systemIds) => 
+            _systemIds = systemIds;
+
+        public string InquireSystemID() 
         {
+            string userInput;
+            
             Console.WriteLine("Введите ID платежной системы:");
 
-            foreach (string systemId in systemIds)
+            foreach (string systemId in _systemIds)
                 Console.WriteLine(systemId);
 
-            PaymentHandler.TryPay(Console.ReadLine());
+            userInput = Console.ReadLine();
+            return userInput;
         }
     }
 
