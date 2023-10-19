@@ -10,6 +10,7 @@ namespace FileCourse
         {
             OrderForm orderForm = new OrderForm(PaymentHandler.SystemIds);
             string chosenSystemId = orderForm.InquireSystemID();
+
             PaymentHandler.TryPay(chosenSystemId);
         }
     }
