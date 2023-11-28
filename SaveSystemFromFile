@@ -1,0 +1,101 @@
+using System;
+using System.IO;
+using UnityEngine;
+
+public static class SaveSystem
+{
+    private const int RowCount = 8;
+    private const int ColumnCount = 2;
+    private const int SceneNameColumn = 0;
+    private const int StatusColumn = 1;
+    private const string SaveSeparator = "%SAVE%";
+
+    private static readonly string SavePath = Application.dataPath + "/SaveFile.txt";
+    private static readonly string[,] _levels = new string[RowCount, ColumnCount];
+
+    public static Action<string> LevelAccomplished = OnLevelAccomplished;
+
+    private static bool TryFindScene(string sceneName, out int sceneIndex) 
+    {
+        sceneIndex = 0;
+        
+        for (int i = 0; i < RowCount; i++)
+        {
+            if (_levels[i, SceneNameColumn] == sceneName)
+            {
+                sceneIndex = i;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void OnLevelAccomplished(string accomplishedSceneName)
+    {
+        if (TryFindScene(accomplishedSceneName, out int accomplishedSceneIndex)) 
+        {
+            if (accomplishedSceneIndex + 1 > RowCount)
+                return;
+            
+            _levels[accomplishedSceneIndex + 1, StatusColumn] = "true";
+            Save();
+        } 
+    }
+
+    private static void Save() 
+    {
+        string[] saveData = new string[RowCount];
+
+        for (int i = 0; i < RowCount; i++)
+            saveData[i] = _levels[i, StatusColumn];
+        
+        string saveString = string.Join(SaveSeparator, saveData);
+        File.WriteAllText(SavePath, saveString);
+    }
+
+    public static bool VerifyAccesstoLevel(string sceneName)
+    {
+        if (TryFindScene(sceneName, out int sceneIndex))
+            return Convert.ToBoolean(_levels[sceneIndex, StatusColumn]);
+
+        return false;
+    }
+
+    public static void Load() 
+    {
+        _levels[0, SceneNameColumn] = SceneNames.Level1;
+        _levels[1, SceneNameColumn] = SceneNames.Level2;
+        _levels[2, SceneNameColumn] = SceneNames.Level3;
+        _levels[3, SceneNameColumn] = SceneNames.Level4;
+        _levels[4, SceneNameColumn] = SceneNames.Level5;
+        _levels[5, SceneNameColumn] = SceneNames.Level6;
+        _levels[6, SceneNameColumn] = SceneNames.Level7;
+        _levels[7, SceneNameColumn] = SceneNames.CustomLevel;
+
+        if (File.Exists(SavePath))
+        {
+            string saveString = File.ReadAllText(SavePath);
+            string[] saveData = saveString.Split(SaveSeparator, StringSplitOptions.None);
+            int i = 0;
+
+            foreach (var accessibility in saveData)              
+                _levels[i++, StatusColumn] = accessibility;
+        }
+        else 
+        {           
+            _levels[0, StatusColumn] = "true";
+
+            for (int i = 1; i < RowCount; i++)
+                _levels[i, StatusColumn] = "false";
+
+            File.Create(SavePath).Close();
+            Save();
+        }
+    }
+
+    public static void Foo() 
+    {
+        
+    }
+}
